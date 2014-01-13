@@ -56,6 +56,7 @@
     var drawHelper = new DrawHelper(cesiumWidget);
 
     function testPolygon() {
+/*
         drawHelper.createEditablePolygon(Cesium.Ellipsoid.WGS84.cartographicArrayToCartesianArray([
             Cesium.Cartographic.fromDegrees(-70.0, 30.0),
             Cesium.Cartographic.fromDegrees(-60.0, 30.0),
@@ -71,21 +72,46 @@
                 }
             })
         });
-/*
+*/
         drawHelper.startDrawingPolygon({
             callback: function(latLngs) {
                 drawHelper.createEditablePolygon(Cesium.Ellipsoid.WGS84.cartographicArrayToCartesianArray(latLngs));
             }
         });
-*/
     }
 
     function testRectangle() {
-        drawHelper.startDrawingRectangle();
+        drawHelper.startDrawingRectangle({
+            callback: function(extent) {
+                drawHelper.createEditableRectangle(extent, {
+                    material: new Cesium.Material({
+                        fabric : {
+                            type : 'Color',
+                            uniforms : {
+                                color : new Cesium.Color(1.0, 0.0, 1.0, 0.6)
+                            }
+                        }
+                    })
+                });
+            }
+        });
     }
 
     function testCircle() {
-        drawHelper.startDrawingCircle();
+        drawHelper.startDrawingCircle({
+            callback: function(center, radius) {
+                drawHelper.createEditableCircle(center, radius, {
+                    material: new Cesium.Material({
+                        fabric : {
+                            type : 'Color',
+                            uniforms : {
+                                color : new Cesium.Color(1.0, 1.0, 0.0, 0.6)
+                            }
+                        }
+                    })
+                });
+            }
+        });
     }
 
 </script>
