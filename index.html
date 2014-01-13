@@ -55,15 +55,6 @@
 
     var drawHelper = new DrawHelper(cesiumWidget);
 
-    function testMarker() {
-        drawHelper.createBillboardGroup(Cesium.Ellipsoid.WGS84.cartographicArrayToCartesianArray([
-            Cesium.Cartographic.fromDegrees(-70.0, 30.0),
-            Cesium.Cartographic.fromDegrees(-60.0, 30.0),
-            Cesium.Cartographic.fromDegrees(-60.0, 40.0),
-            Cesium.Cartographic.fromDegrees(-70.0, 40.0)
-        ]), {onDrag: function() {}, onDragEnd: function(){alert("dragged");}});
-    }
-
     function testPolygon() {
         drawHelper.createEditablePolygon(Cesium.Ellipsoid.WGS84.cartographicArrayToCartesianArray([
             Cesium.Cartographic.fromDegrees(-70.0, 30.0),
