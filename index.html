@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Hello World!</title>
+    <script src="Cesium/Cesium.js"></script>
+    <script src="DrawHelper.js"></script>
+    <style>
+        @import url(Cesium/Widgets/CesiumWidget/CesiumWidget.css);
+        #cesiumContainer {
+            position: absolute;
+            top: 0px;
+            left: 0;
+            height: 100%;
+            width: 100%;
+            margin: 0;
+            overflow: hidden;
+            padding: 0;
+            font-family: sans-serif;
+        }
+        #toolbar {
+            position: absolute;
+            top: 0px;
+            left: 0;
+            display: inline;
+            margin: 10px;
+            padding: 10px;
+            background: white;
+        }
+
+        body {
+            padding: 0;
+            margin: 0;
+            overflow: hidden;
+        }
+        .tooltip {
+            background-color: black;
+            white-space: nowrap;
+            font-size: 9px;
+            margin: 5px;
+            padding: 5px 10px;
+            color: white;
+            width: 150px;
+        }
+    </style>
+</head>
+<body>
+    <div id="cesiumContainer"></div>
+    <div id="toolbar">
+        <button onclick="testPolygon()">Draw Polygon</button>
+        <button onclick="testRectangle()">Draw Rectangle</button>
+        <button onclick="testCircle()">Draw Circle</button>
+    </div>
+<script>
+    var cesiumWidget = new Cesium.CesiumWidget('cesiumContainer');
+
+    var drawHelper = new DrawHelper(cesiumWidget);
+
+    function testMarker() {
+        drawHelper.createBillboardGroup(Cesium.Ellipsoid.WGS84.cartographicArrayToCartesianArray([
+            Cesium.Cartographic.fromDegrees(-70.0, 30.0),
+            Cesium.Cartographic.fromDegrees(-60.0, 30.0),
+            Cesium.Cartographic.fromDegrees(-60.0, 40.0),
+            Cesium.Cartographic.fromDegrees(-70.0, 40.0)
+        ]), {onDrag: function() {}, onDragEnd: function(){alert("dragged");}});
+    }
+
+    function testPolygon() {
+        drawHelper.createEditablePolygon(Cesium.Ellipsoid.WGS84.cartographicArrayToCartesianArray([
+            Cesium.Cartographic.fromDegrees(-70.0, 30.0),
+            Cesium.Cartographic.fromDegrees(-60.0, 30.0),
+            Cesium.Cartographic.fromDegrees(-60.0, 40.0),
+            Cesium.Cartographic.fromDegrees(-70.0, 40.0)
+        ]), {
+            material: new Cesium.Material({
+                fabric : {
+                    type : 'Color',
+                    uniforms : {
+                        color : new Cesium.Color(1.0, 0.0, 0.0, 0.6)
+                    }
+                }
+            })
+        });
+/*
+        drawHelper.startDrawingPolygon({
+            callback: function(latLngs) {
+                drawHelper.createEditablePolygon(Cesium.Ellipsoid.WGS84.cartographicArrayToCartesianArray(latLngs));
+            }
+        });
+*/
+    }
+
+    function testRectangle() {
+        drawHelper.startDrawingRectangle();
+    }
+
+    function testCircle() {
+        drawHelper.startDrawingCircle();
+    }
+
+</script>
+</body>
+</html>
