@@ -42,7 +42,7 @@ var DrawHelper = (function() {
                 if(_self._handlersMuted == true) return;
                 var pickedObject = scene.pick(movement.endPosition);
                 if(mouseOutObject && (!pickedObject || mouseOutObject != pickedObject.primitive)) {
-                    mouseOutObject.mouseOut(movement.endPosition);
+                    !(mouseOutObject.isDestroyed && mouseOutObject.isDestroyed()) && mouseOutObject.mouseOut(movement.endPosition);
                     mouseOutObject = null;
                 }
                 if(pickedObject && pickedObject.primitive) {
@@ -214,7 +214,7 @@ var DrawHelper = (function() {
                         // update marker
                         markers.getBillboard(positions.length - 1).setPosition(cartesian);
                         // show tooltip
-                        tooltip.showAt(position, "<p>Click to add new point</p>" + (positions.length > 3 ? "<p>Double click to finish drawing</p>" : ""));
+                        tooltip.showAt(position, "<p>Click to add new point (" + positions.length + ")</p>" + (positions.length > 3 ? "<p>Double click to finish drawing</p>" : ""));
                     }
                 }
             }
@@ -997,6 +997,7 @@ var DrawHelper = (function() {
                     }
                     function onDragEnd(position) {
                         handler.destroy();
+                        enableRotation(true);
                         callbacks.dragHandlers.onDragEnd && callbacks.dragHandlers.onDragEnd(getIndex(), position);
                     }
 
@@ -1108,26 +1109,35 @@ var DrawHelper = (function() {
     function createTooltip(frameDiv) {
 
         var tooltip = function(frameDiv) {
+
             var div = document.createElement('DIV');
-            div.innerHTML = "Position: ";
-            div.style = "position: absolute; top: 0px; left: 0px;";
-            div.className = "tooltip";
-            this.div_ = div;
+            div.className = "twipsy right";
+
+            var arrow = document.createElement('DIV');
+            arrow.className = "twipsy-arrow";
+            div.appendChild(arrow);
+
+            var title = document.createElement('DIV');
+            title.className = "twipsy-inner";
+            div.appendChild(title);
+
+            this._div = div;
+            this._title = title;
+
             // add to frame div and display coordinates
             frameDiv.appendChild(div);
         }
 
         tooltip.prototype.setVisible = function(visible) {
-            this.div_.style.display = visible ? 'block' : 'none';
+            this._div.style.display = visible ? 'block' : 'none';
         }
 
         tooltip.prototype.showAt = function(position, message) {
             if(position && message) {
                 this.setVisible(true);
-                this.div_.innerHTML = message;
-                this.div_.style.position = "absolute";
-                this.div_.style.left = position.x + 10 + "px";
-                this.div_.style.top = position.y + 10 + "px";
+                this._title.innerHTML = message;
+                this._div.style.left = position.x + 10 + "px";
+                this._div.style.top = (position.y - this._div.clientHeight / 2) + "px";
             }
         }
 
