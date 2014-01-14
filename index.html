@@ -83,39 +83,30 @@
         }
     </style>
 </head>
-<body>
+<body onload="start()">
     <div id="cesiumContainer"></div>
     <div id="toolbar">
         <button onclick="testPolygon()">Draw Polygon</button>
         <button onclick="testRectangle()">Draw Rectangle</button>
         <button onclick="testCircle()">Draw Circle</button>
     </div>
-<script>
-    var cesiumWidget = new Cesium.CesiumWidget('cesiumContainer');
 
-    var drawHelper = new DrawHelper(cesiumWidget);
+<script>
+
+    var drawHelper = {};
+
+    function start() {
+        // create the almighty cesium widget
+        var cesiumWidget = new Cesium.CesiumWidget('cesiumContainer');
+        // start the draw helper to enable shape creation and editing
+        drawHelper = new DrawHelper(cesiumWidget);
+
+    }
 
     function testPolygon() {
-/*
-        drawHelper.createEditablePolygon(Cesium.Ellipsoid.WGS84.cartographicArrayToCartesianArray([
-            Cesium.Cartographic.fromDegrees(-70.0, 30.0),
-            Cesium.Cartographic.fromDegrees(-60.0, 30.0),
-            Cesium.Cartographic.fromDegrees(-60.0, 40.0),
-            Cesium.Cartographic.fromDegrees(-70.0, 40.0)
-        ]), {
-            material: new Cesium.Material({
-                fabric : {
-                    type : 'Color',
-                    uniforms : {
-                        color : new Cesium.Color(1.0, 0.0, 0.0, 0.6)
-                    }
-                }
-            })
-        });
-*/
         drawHelper.startDrawingPolygon({
-            callback: function(latLngs) {
-                drawHelper.createEditablePolygon(Cesium.Ellipsoid.WGS84.cartographicArrayToCartesianArray(latLngs));
+            callback: function(points) {
+                drawHelper.createEditablePolygon(points);
             }
         });
     }

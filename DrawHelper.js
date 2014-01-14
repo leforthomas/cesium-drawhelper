@@ -230,7 +230,7 @@ var DrawHelper = (function() {
                     if (cartesian) {
                         _self.stopDrawing();
                         if(typeof options.callback == 'function') {
-                            options.callback(ellipsoid.cartesianArrayToCartographicArray(positions));
+                            options.callback(positions);
                         }
                     }
                 }
