@@ -79,14 +79,17 @@ var DrawHelper = (function() {
         this._surfaces.push(surface);
     }
     _.prototype.registerEditableShapeHandlers = function(surface, shape) {
+        var _self = this;
         // handlers for interactions
         // highlight polygon when mouse is entering
         setListener(shape, 'mouseMove', function(position) {
             surface.setHighlighted(true);
+            _self._tooltip.showAt(position, "Click to edit this shape");
         });
         // hide the highlighting when mouse is leaving the polygon
         setListener(shape, 'mouseOut', function(position) {
             surface.setHighlighted(false);
+            _self._tooltip.setVisible(false);
         });
         setListener(shape, 'leftClick', function(position) {
             surface.setEditMode(true);
@@ -934,6 +937,7 @@ var DrawHelper = (function() {
     _.prototype.createBillboardGroup = function(points, callbacks) {
         var markers = new _.BillboardGroup(this, defaultBillboard);
         markers.addBillboards(points, callbacks);
+        return markers;
     }
 
     _.BillboardGroup = function(drawHelper, options) {
@@ -1084,7 +1088,7 @@ var DrawHelper = (function() {
     }
 
     _.BillboardGroup.prototype.setOnTop = function() {
-        this._scene.getPrimitives().raiseToTop(this._billboards);
+            this._scene.getPrimitives().raiseToTop(this._billboards);
     }
 
     function getExtent(mn, mx) {
