@@ -84,7 +84,9 @@ var DrawHelper = (function() {
         // highlight polygon when mouse is entering
         setListener(shape, 'mouseMove', function(position) {
             surface.setHighlighted(true);
-            _self._tooltip.showAt(position, "Click to edit this shape");
+            if(!surface._editMode) {
+                _self._tooltip.showAt(position, "Click to edit this shape");
+            }
         });
         // hide the highlighting when mouse is leaving the polygon
         setListener(shape, 'mouseOut', function(position) {
