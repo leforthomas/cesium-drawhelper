@@ -56,18 +56,49 @@
     function start() {
         // create the almighty cesium widget
         var cesiumWidget = new Cesium.CesiumWidget('cesiumContainer');
+        var scene = cesiumWidget.scene;
         // start the draw helper to enable shape creation and editing
         var drawHelper = new DrawHelper(cesiumWidget);
         var toolbar = drawHelper.addToolbar(document.getElementById("toolbar"), {
         });
-        toolbar.addListener('polygonEdited', function(event) {
-            loggingMessage('Polygon edited: ' + event.positions.length + ' points');
+        toolbar.addListener('polygonCreated', function(event) {
+            loggingMessage('Polygon created with ' + event.positions.length + ' points');
+            var polygon = new Cesium.Polygon({
+                positions: event.positions,
+                material : Cesium.Material.fromType('Checkerboard')
+            });
+            scene.getPrimitives().add(polygon);
+            polygon.setEditable();
+            polygon.addListener('onEdited', function(event) {
+                loggingMessage('Polygon edited, ' + event.positions.length + ' points');
+            });
+
         });
-        toolbar.addListener('circleEdited', function(event) {
-            loggingMessage('Circle edited: radius is ' + event.radius.toFixed(1) + ' meters');
+        toolbar.addListener('circleCreated', function(event) {
+            loggingMessage('Circle created: center is ' + event.center.toString() + ' and radius is ' + event.radius.toFixed(1) + ' meters');
+            var circle = new DrawHelper.CirclePrimitive({
+                center: event.center,
+                radius: event.radius,
+                material: Cesium.Material.fromType(Cesium.Material.RimLightingType)
+            });
+            scene.getPrimitives().add(circle);
+            circle.setEditable();
+            circle.addListener('onEdited', function(event) {
+                loggingMessage('Circle edited: radius is ' + event.radius.toFixed(1) + ' meters');
+            });
         });
-        toolbar.addListener('extentEdited', function(event) {
-            loggingMessage('Extent edited: extent is (N: ' + event.extent.north.toFixed(3) + ', E: ' + event.extent.east.toFixed(3) + ', S: ' + event.extent.south.toFixed(3) + ', W: ' + event.extent.west.toFixed(3) + ')');
+        toolbar.addListener('extentCreated', function(event) {
+            var extent = event.extent;
+            loggingMessage('Extent created (N: ' + extent.north.toFixed(3) + ', E: ' + extent.east.toFixed(3) + ', S: ' + extent.south.toFixed(3) + ', W: ' + extent.west.toFixed(3) + ')');
+            var extentPrimitive = new Cesium.ExtentPrimitive({
+                extent: extent,
+                material: Cesium.Material.fromType(Cesium.Material.StripeType)
+            });
+            scene.getPrimitives().add(extentPrimitive);
+            extentPrimitive.setEditable();
+            extentPrimitive.addListener('onEdited', function(event) {
+                loggingMessage('Extent edited: extent is (N: ' + event.extent.north.toFixed(3) + ', E: ' + event.extent.east.toFixed(3) + ', S: ' + event.extent.south.toFixed(3) + ', W: ' + event.extent.west.toFixed(3) + ')');
+            });
         });
 
         var logging = document.getElementById('logging');

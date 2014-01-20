@@ -906,9 +906,9 @@ var DrawHelper = (function() {
                                 },
                                 onDragEnd: function(index, position) {
                                     // create new sets of makers for editing
-                                    markers.insertBillboard(this.index, position);
+                                    markers.insertBillboard(this.index, position, handleMarkerChanges);
                                     editMarkers.getBillboard(this.index - 1).setPosition(calculateHalfMarkerPosition(this.index - 1));
-                                    editMarkers.insertBillboard(this.index, calculateHalfMarkerPosition(this.index));
+                                    editMarkers.insertBillboard(this.index, calculateHalfMarkerPosition(this.index), handleEditMarkerChanges);
                                     onEdited();
                                 }
                             }
@@ -1228,6 +1228,11 @@ var DrawHelper = (function() {
         // constructor
         function _(drawHelper, options) {
 
+            // container must be specified
+            if(!(Cesium.defined(options.container))) {
+                throw new Cesium.DeveloperError('Container is required');
+            }
+
             var drawOptions = {
                 polygonIcon: "./img/glyphicons_096_vector_path_polygon.png",
                 circleIcon: "./img/glyphicons_095_vector_path_circle.png",
@@ -1270,7 +1275,7 @@ var DrawHelper = (function() {
 
             var toolbar = document.createElement('DIV');
             toolbar.className = "toolbar";
-            (options.container || cesiumWidget.container).appendChild(toolbar);
+            options.container.appendChild(toolbar);
 
             function addIcon(id, url, title, callback) {
                 var div = document.createElement('DIV');
@@ -1291,17 +1296,7 @@ var DrawHelper = (function() {
             addIcon('polygon', options.polygonIcon, 'Click to start drawing a 2D polygon', function() {
                 drawHelper.startDrawingPolygon({
                     callback: function(positions) {
-                        _self.executeListeners({name: 'polygonCreated', points: positions}, function() {
-                            var polygon = new Cesium.Polygon({
-                                positions: positions,
-                                options: options.polygonDrawingOptions
-                            });
-                            scene.getPrimitives().add(polygon);
-                            polygon.setEditable();
-                            polygon.addListener('onEdited', function(event) {
-                                _self.executeListeners({name: 'polygonEdited', positions: event.positions});
-                            });
-                        });
+                        _self.executeListeners({name: 'polygonCreated', positions: positions});
                     }
                 });
             })
@@ -1309,17 +1304,7 @@ var DrawHelper = (function() {
             addIcon('extent', options.extentIcon, 'Click to start drawing an Extent', function() {
                 drawHelper.startDrawingExtent({
                     callback: function(extent) {
-                        _self.executeListeners({name: 'extentCreated', extent: extent}, function() {
-                            var extentPrimitive = new Cesium.ExtentPrimitive({
-                                extent: extent,
-                                options: options.extentDrawingOptions
-                            });
-                            scene.getPrimitives().add(extentPrimitive);
-                            extentPrimitive.setEditable();
-                            extentPrimitive.addListener('onEdited', function(event) {
-                                _self.executeListeners({name: 'extentEdited', extent: event.extent});
-                            });
-                        });
+                        _self.executeListeners({name: 'extentCreated', extent: extent});
                     }
                 });
             })
@@ -1327,18 +1312,7 @@ var DrawHelper = (function() {
             addIcon('circle', options.circleIcon, 'Click to start drawing a Circle', function() {
                 drawHelper.startDrawingCircle({
                     callback: function(center, radius) {
-                        _self.executeListeners({name: 'circleCreated', center: center, radius: radius}, function() {
-                            var circle = new DrawHelper.CirclePrimitive({
-                                center: center,
-                                radius: radius,
-                                options: options.circleDrawingOptions
-                            });
-                            scene.getPrimitives().add(circle);
-                            circle.setEditable();
-                            circle.addListener('onEdited', function(event) {
-                                _self.executeListeners({name: 'circleEdited', center: event.center, radius: event.radius});
-                            });
-                        });
+                        _self.executeListeners({name: 'circleCreated', center: center, radius: radius});
                     }
                 });
             })
