@@ -1,4 +1,4 @@
-DrawHelperCesium
+cesium-drawhelper
 ================
 
 DrawHelper: A very early stage shape editor for Cesium. Currently limited to 2D and simple shapes.
