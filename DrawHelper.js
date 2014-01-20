@@ -1,7 +1,9 @@
 /**
  * Created by thomas on 9/01/14.
  *
- * www.geocento.com
+ *
+ *
+ * (c) www.geocento.com
  * www.metaaps.com
  *
  */
