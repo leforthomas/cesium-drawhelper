@@ -6,6 +6,7 @@
     <script src="DrawHelper.js"></script>
     <style>
         @import url(Cesium/Widgets/CesiumWidget/CesiumWidget.css);
+        @import url(DrawHelper.css);
         #cesiumContainer {
             position: absolute;
             top: 0px;
@@ -26,132 +27,54 @@
             padding: 10px;
             background: white;
         }
+        #logging {
+            position: absolute;
+            bottom: 0px;
+            left: 0;
+            display: inline;
+            margin: 10px;
+            padding: 10px;
+            background: white;
+        }
 
         body {
             padding: 0;
             margin: 0;
             overflow: hidden;
         }
-        /*
-            initial twipsy code taken from bootstrap
-        */
-        .twipsy {
-            display: block;
-            position: absolute;
-            visibility: visible;
-            max-width: 200px;
-            min-width: 100px;
-            padding: 5px;
-            font-size: 11px;
-            z-index: 1000;
-            opacity: 0.8;
-            -khtml-opacity: 0.8;
-            -moz-opacity: 0.8;
-            filter: alpha(opacity=80);
-        }
-        .twipsy.left .twipsy-arrow {
-            top: 50%;
-            right: 0;
-            margin-top: -5px;
-            border-top: 5px solid transparent;
-            border-bottom: 5px solid transparent;
-            border-left: 5px solid #000000;
-        }
-        .twipsy.right .twipsy-arrow {
-            top: 50%;
-            left: 0;
-            margin-top: -5px;
-            border-top: 5px solid transparent;
-            border-bottom: 5px solid transparent;
-            border-right: 5px solid #000000;
-        }
-        .twipsy-inner {
-            padding: 3px 8px;
-            background-color: #000000;
-            color: white;
-            text-align: center;
-            max-width: 200px;
-            text-decoration: none;
-            -webkit-border-radius: 4px;
-            -moz-border-radius: 4px;
-            border-radius: 4px;
-        }
-        .twipsy-arrow {
-            position: absolute;
-            width: 0;
-            height: 0;
-        }
     </style>
 </head>
 <body onload="start()">
     <div id="cesiumContainer"></div>
     <div id="toolbar">
-        <button onclick="testPolygon()">Draw Polygon</button>
-        <button onclick="testRectangle()">Draw Rectangle</button>
-        <button onclick="testCircle()">Draw Circle</button>
+    </div>
+    <div id="logging">
     </div>
 
 <script>
-
-    var drawHelper = {};
 
     function start() {
         // create the almighty cesium widget
         var cesiumWidget = new Cesium.CesiumWidget('cesiumContainer');
         // start the draw helper to enable shape creation and editing
-        drawHelper = new DrawHelper(cesiumWidget);
-
-    }
-
-    function testPolygon() {
-        drawHelper.startDrawingPolygon({
-            callback: function(points) {
-                drawHelper.createEditablePolygon(points, {
-                    material: new Cesium.Material({
-                        fabric : {
-                            type : 'Color',
-                            uniforms : {
-                                color : new Cesium.Color(0.0, 1.0, 0.0, 0.6)
-                            }
-                        }
-                    })
-                });
-            }
+        var drawHelper = new DrawHelper(cesiumWidget);
+        var toolbar = drawHelper.addToolbar(document.getElementById("toolbar"), {
         });
-    }
-
-    function testRectangle() {
-        drawHelper.startDrawingRectangle({
-            callback: function(extent) {
-                drawHelper.createEditableRectangle(extent, {
-                    material: new Cesium.Material({
-                        fabric : {
-                            type : 'Color',
-                            uniforms : {
-                                color : new Cesium.Color(1.0, 0.0, 1.0, 0.6)
-                            }
-                        }
-                    })
-                });
-            }
+        toolbar.addListener('polygonEdited', function(event) {
+            loggingMessage('Polygon edited: ' + event.positions.length + ' points');
         });
-    }
-
-    function testCircle() {
-        drawHelper.startDrawingCircle({
-            callback: function(center, radius) {
-                drawHelper.createEditableCircle(center, radius, {
-                    material: new Cesium.Material({
-                        fabric : {
-                            type : 'Color',
-                            uniforms : {
-                                color : new Cesium.Color(0.0, 1.0, 1.0, 0.6)
-                            }
-                         }
-                    })
-                });
-            }
+        toolbar.addListener('circleEdited', function(event) {
+            loggingMessage('Circle edited: radius is ' + event.radius + ' meters');
         });
+        toolbar.addListener('extentEdited', function(event) {
+            loggingMessage('Extent edited: extent is ' + event.extent.toString());
+        });
+
+        var logging = document.getElementById('logging');
+        function loggingMessage(message) {
+            logging.innerHTML = message;
+        }
+
     }
 
 </script>
