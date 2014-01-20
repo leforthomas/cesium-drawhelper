@@ -24,13 +24,13 @@
             left: 0;
             display: inline;
             margin: 10px;
-            padding: 10px;
+            padding: 0px;
             background: white;
         }
         #logging {
             position: absolute;
             bottom: 0px;
-            left: 0;
+            right: 0;
             display: inline;
             margin: 10px;
             padding: 10px;
@@ -64,10 +64,10 @@
             loggingMessage('Polygon edited: ' + event.positions.length + ' points');
         });
         toolbar.addListener('circleEdited', function(event) {
-            loggingMessage('Circle edited: radius is ' + event.radius + ' meters');
+            loggingMessage('Circle edited: radius is ' + event.radius.toFixed(1) + ' meters');
         });
         toolbar.addListener('extentEdited', function(event) {
-            loggingMessage('Extent edited: extent is ' + event.extent.toString());
+            loggingMessage('Extent edited: extent is (N: ' + event.extent.north.toFixed(3) + ', E: ' + event.extent.east.toFixed(3) + ', S: ' + event.extent.south.toFixed(3) + ', W: ' + event.extent.west.toFixed(3) + ')');
         });
 
         var logging = document.getElementById('logging');
