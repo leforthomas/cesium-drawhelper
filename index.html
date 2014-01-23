@@ -61,6 +61,47 @@
         var drawHelper = new DrawHelper(cesiumWidget);
         var toolbar = drawHelper.addToolbar(document.getElementById("toolbar"), {
         });
+        toolbar.addListener('markerCreated', function(event) {
+            loggingMessage('Marker created at ' + event.position.toString());
+            // create one common billboard collection for all billboards
+            var b = new Cesium.BillboardCollection();
+            var a = scene.getContext().createTextureAtlas();
+            b.setTextureAtlas(a);
+            scene.getPrimitives().add(b);
+            var image = new Image();
+            image.onload = function() {
+                a.addImage(image);
+            };
+            image.src = './img/glyphicons_242_google_maps.png';
+            var billboard = b.add({
+                show : true,
+                position : event.position,
+                pixelOffset : new Cesium.Cartesian2(0, 0),
+                eyeOffset : new Cesium.Cartesian3(0.0, 0.0, 0.0),
+                horizontalOrigin : Cesium.HorizontalOrigin.CENTER,
+                verticalOrigin : Cesium.VerticalOrigin.CENTER,
+                scale : 1.0,
+                imageIndex : 0,
+                color : new Cesium.Color(1.0, 1.0, 1.0, 1.0)
+            });
+            billboard.setEditable();
+        });
+        toolbar.addListener('polylineCreated', function(event) {
+            loggingMessage('Polyline created with ' + event.positions.length + ' points');
+            var polylineCollection = new Cesium.PolylineCollection();
+            scene.getPrimitives().add(polylineCollection);
+            var polyline = polylineCollection.add();
+            var outlineMaterial = Cesium.Material.fromType(Cesium.Material.PolylineOutlineType);
+            outlineMaterial.uniforms.outlineWidth = 5.0;
+            polyline.setMaterial(outlineMaterial);
+            polyline.setWidth(5);
+            polyline.setPositions(event.positions);
+            polyline.setEditable();
+            polyline.addListener('onEdited', function(event) {
+                loggingMessage('Polyline edited, ' + event.positions.length + ' points');
+            });
+
+        });
         toolbar.addListener('polygonCreated', function(event) {
             loggingMessage('Polygon created with ' + event.positions.length + ' points');
             var polygon = new Cesium.Polygon({
@@ -105,6 +146,16 @@
         function loggingMessage(message) {
             logging.innerHTML = message;
         }
+
+        var ellipse = new DrawHelper.EllipsePrimitive({
+            center : Cesium.Ellipsoid.WGS84.cartographicToCartesian(Cesium.Cartographic.fromDegrees(-95.0, 35.0)),
+            semiMinorAxis : 200000.0,
+            semiMajorAxis : 400000.0,
+            rotation : 0,
+            material: Cesium.Material.fromType(Cesium.Material.RimLightingType)
+        });
+        scene.getPrimitives().add(ellipse);
+        ellipse.setEditable();
 
     }
 
