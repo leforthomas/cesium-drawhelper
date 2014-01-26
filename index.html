@@ -45,6 +45,7 @@
     </style>
 </head>
 <body onload="start()">
+
     <div id="cesiumContainer"></div>
     <div id="toolbar">
     </div>
@@ -52,6 +53,8 @@
     </div>
 
 <script>
+
+    Cesium.BingMapsApi.defaultKey = 'AgVponCiOIcztTV3i0JC5gknsMO-x4RMrWOMPwoRLOfzi0kwdAQfol4Qsu9AYxSg';
 
     function start() {
         // create the almighty cesium widget
@@ -88,6 +91,13 @@
         });
         toolbar.addListener('polylineCreated', function(event) {
             loggingMessage('Polyline created with ' + event.positions.length + ' points');
+            var polyline = new DrawHelper.PolylinePrimitive({
+                positions: event.positions,
+                width: 5,
+                geodesic: true
+            });
+            scene.getPrimitives().add(polyline);
+/*
             var polylineCollection = new Cesium.PolylineCollection();
             scene.getPrimitives().add(polylineCollection);
             var polyline = polylineCollection.add();
@@ -96,6 +106,7 @@
             polyline.setMaterial(outlineMaterial);
             polyline.setWidth(5);
             polyline.setPositions(event.positions);
+*/
             polyline.setEditable();
             polyline.addListener('onEdited', function(event) {
                 loggingMessage('Polyline edited, ' + event.positions.length + ' points');
@@ -147,6 +158,22 @@
             logging.innerHTML = message;
         }
 
+         var outlineMaterial = Cesium.Material.fromType(Cesium.Material.PolylineOutlineType);
+        outlineMaterial.uniforms.outlineWidth = 5.0;
+        var polyline = new DrawHelper.PolylinePrimitive({
+            positions: Cesium.Ellipsoid.WGS84.cartographicArrayToCartesianArray([
+                Cesium.Cartographic.fromDegrees(-11.0, 37.0),
+                Cesium.Cartographic.fromDegrees(-11.0, 32.0),
+                Cesium.Cartographic.fromDegrees(-107.0, 33.0),
+                Cesium.Cartographic.fromDegrees(-102.0, 31.0),
+                Cesium.Cartographic.fromDegrees(-10.0, 35.0)
+            ]),
+            geodesic: true,
+            material: outlineMaterial
+        });
+        scene.getPrimitives().add(polyline);
+        polyline.setEditable();
+
         var ellipse = new DrawHelper.EllipsePrimitive({
             center : Cesium.Ellipsoid.WGS84.cartographicToCartesian(Cesium.Cartographic.fromDegrees(-95.0, 35.0)),
             semiMinorAxis : 200000.0,
@@ -156,7 +183,6 @@
         });
         scene.getPrimitives().add(ellipse);
         ellipse.setEditable();
-
     }
 
 </script>

@@ -147,48 +147,43 @@ var DrawHelper = (function() {
         }
     }
 
-    var defaultSurfaceOptions = {
-        material: new Cesium.Material({
-            fabric : {
-                type : 'Color',
-                uniforms : {
-                    color : new Cesium.Color(1.0, 1.0, 0.0, 0.6)
-                }
-            }
-        })
-    };
+    var material = Cesium.Material.fromType(Cesium.Material.ColorType);
+    material.uniforms.color = new Cesium.Color(1.0, 1.0, 0.0, 0.5);
 
-    var defaultPolylineOptions = {
+    var defaultShapeOptions = {
+        ellipsoid: Cesium.Ellipsoid.WGS84,
+        textureRotationAngle: 0.0,
+        height: 0.0,
+        asynchronous: true,
+        show: true,
+        debugShowBoundingVolume: false
+    }
+
+    var defaultSurfaceOptions = copyOptions(defaultShapeOptions, {
+        appearance: new Cesium.EllipsoidSurfaceAppearance({
+            material: material,
+            aboveGround : false
+        }),
+        granularity: Math.PI / 180.0
+    });
+
+    var defaultEllipseOptions = copyOptions(defaultSurfaceOptions, {rotation: 0});
+
+    var defaultPolylineOptions = copyOptions(defaultShapeOptions, {
         width: 5,
-        material: new Cesium.Material({
-            fabric : {
-                type : 'Color',
-                uniforms : {
-                    color : new Cesium.Color(1.0, 1.0, 0.0, 0.6)
-                }
-            }
+        geodesic: true,
+        granularity: 10000,
+        appearance: new Cesium.PolylineMaterialAppearance({
+            material : material,
+            aboveGround : false
         })
-    };
+    });
 
     var ChangeablePrimitive = (function() {
         function _() {
         }
 
         _.prototype.initialiseOptions = function(options) {
-
-            var material = Cesium.Material.fromType(Cesium.Material.ColorType);
-            material.uniforms.color = new Cesium.Color(1.0, 1.0, 0.0, 0.5);
-
-            options = fillOptions(options, {
-                ellipsoid: Cesium.Ellipsoid.WGS84,
-                granularity: Math.PI / 180.0,
-                height: 0.0,
-                textureRotationAngle: 0.0,
-                show: true,
-                material: material,
-                asynchronous: true,
-                debugShowBoundingVolume: false
-            });
 
             fillOptions(this, options);
 
@@ -217,11 +212,12 @@ var DrawHelper = (function() {
          * @private
          */
         _.prototype.update = function(context, frameState, commandList) {
+
             if (!Cesium.defined(this.ellipsoid)) {
                 throw new Cesium.DeveloperError('this.ellipsoid must be defined.');
             }
 
-            if (!Cesium.defined(this.material)) {
+            if (!Cesium.defined(this.appearance)) {
                 throw new Cesium.DeveloperError('this.material must be defined.');
             }
 
@@ -260,16 +256,13 @@ var DrawHelper = (function() {
                         id : this.id,
                         pickPrimitive : this
                     }),
-                    appearance : new Cesium.EllipsoidSurfaceAppearance({
-                        aboveGround : (this.height > 0.0)
-                    }),
+                    appearance : this.appearance,
                     asynchronous : this.asynchronous
                 });
             }
 
             var primitive = this._primitive;
             primitive.debugShowBoundingVolume = this.debugShowBoundingVolume;
-            primitive.appearance.material = this.material;
             primitive.update(context, frameState, commandList);
         };
 
@@ -291,6 +284,8 @@ var DrawHelper = (function() {
             if(!(Cesium.defined(options.center) && Cesium.defined(options.radius))) {
                 throw new Cesium.DeveloperError('Center and radius are required');
             }
+
+            options = copyOptions(options, defaultSurfaceOptions);
 
             this.initialiseOptions(options);
 
@@ -342,7 +337,7 @@ var DrawHelper = (function() {
                 throw new Cesium.DeveloperError('Center and semi major and semi minor axis are required');
             }
 
-            options = fillOptions(options, {rotation: 0});
+            options = copyOptions(options, defaultEllipseOptions);
 
             this.initialiseOptions(options);
 
@@ -391,18 +386,84 @@ var DrawHelper = (function() {
             }
 
             return new Cesium.EllipseGeometry({
-                ellipsoid : this.ellipsoid,
-                center : this.center,
-                semiMajorAxis : this.semiMajorAxis,
-                semiMinorAxis : this.semiMinorAxis,
-                rotation : this.rotation,
-                height : this.height,
-                vertexFormat : Cesium.EllipsoidSurfaceAppearance.VERTEX_FORMAT,
-                stRotation : this.textureRotationAngle,
-                ellipsoid : this.ellipsoid,
-                granularity : this.granularity
-            });
+                        ellipsoid : this.ellipsoid,
+                        center : this.center,
+                        semiMajorAxis : this.semiMajorAxis,
+                        semiMinorAxis : this.semiMinorAxis,
+                        rotation : this.rotation,
+                        height : this.height,
+                        vertexFormat : Cesium.EllipsoidSurfaceAppearance.VERTEX_FORMAT,
+                        stRotation : this.textureRotationAngle,
+                        ellipsoid : this.ellipsoid,
+                        granularity : this.granularity
+                    });
         };
+
+        return _;
+    })();
+
+    function getGeodesicPath(cartesians, granularity) {
+        var index, cartographicPath = ellipsoid.cartesianArrayToCartographicArray(cartesians), geodesic, increment, ellipsoidCartographicPath = [];
+        for(index = 0; index < cartographicPath.length - 1; index++) {
+            geodesic = new Cesium.EllipsoidGeodesic(cartographicPath[index], cartographicPath[index + 1]);
+            // add a point every granularity
+            var totalDistance = geodesic.getSurfaceDistance(),
+                distance = 0;
+            for(; distance < totalDistance; distance += granularity) {
+                ellipsoidCartographicPath.push(geodesic.interpolateUsingSurfaceDistance(distance));
+            }
+        }
+        return ellipsoid.cartographicArrayToCartesianArray(ellipsoidCartographicPath);
+    }
+
+    _.PolylinePrimitive = (function() {
+        function _(options) {
+
+            options = copyOptions(options, defaultPolylineOptions);
+
+            this.initialiseOptions(options);
+
+        }
+
+        _.prototype = new ChangeablePrimitive();
+
+        _.prototype.setPositions = function(positions) {
+            this.setAttribute('positions', positions);
+        };
+
+        _.prototype.setWidth = function(width) {
+            this.setAttribute('width', width);
+        };
+
+        _.prototype.setGeodesic = function(geodesic) {
+            this.setAttribute('geodesic', geodesic);
+        };
+
+        _.prototype.getPositions = function() {
+            return this.getAttribute('positions');
+        };
+
+        _.prototype.getWidth = function() {
+            return this.getAttribute('width');
+        };
+
+        _.prototype.getGeodesic = function(geodesic) {
+            return this.getAttribute('geodesic');
+        };
+
+        _.prototype.getGeometry = function() {
+            if (!Cesium.defined(this.positions) || this.positions.length < 2) {
+                return;
+            }
+
+            return new Cesium.PolylineGeometry({
+                    positions: this.geodesic ? getGeodesicPath(this.positions, Math.max(this.granularity, 50000)) : this.positions,
+                    height : this.height,
+                    width: this.width,
+                    vertexFormat : Cesium.EllipsoidSurfaceAppearance.VERTEX_FORMAT,
+                    ellipsoid : this.ellipsoid
+                });
+        }
 
         return _;
     })();
@@ -436,7 +497,7 @@ var DrawHelper = (function() {
         this._drawHelper = drawHelper;
         this._scene = drawHelper._scene;
 
-        this._options = fillOptions(options, defaultBillboard);
+        this._options = copyOptions(options, defaultBillboard);
 
         // create one common billboard collection for all billboards
         var b = new Cesium.BillboardCollection();
@@ -588,7 +649,7 @@ var DrawHelper = (function() {
 
     _.prototype.startDrawingMarker = function(options) {
 
-        var options = fillOptions(options, defaultBillboard);
+        var options = copyOptions(options, defaultBillboard);
 
         this.startDrawing(
             function() {
@@ -634,12 +695,12 @@ var DrawHelper = (function() {
     }
 
     _.prototype.startDrawingPolygon = function(options) {
-        var options = fillOptions(options, defaultSurfaceOptions);
+        var options = copyOptions(options, defaultSurfaceOptions);
         this.startDrawingPolyshape(true, options);
     }
 
     _.prototype.startDrawingPolyline = function(options) {
-        var options = fillOptions(options, defaultPolylineOptions);
+        var options = copyOptions(options, defaultPolylineOptions);
         this.startDrawingPolyshape(false, options);
     }
 
@@ -750,7 +811,7 @@ var DrawHelper = (function() {
 
     _.prototype.startDrawingExtent = function(options) {
 
-        var options = fillOptions(options, defaultSurfaceOptions);
+        var options = copyOptions(options, defaultSurfaceOptions);
 
         this.startDrawing(
             function() {
@@ -832,7 +893,7 @@ var DrawHelper = (function() {
 
     _.prototype.startDrawingCircle = function(options) {
 
-        var options = fillOptions(options, defaultSurfaceOptions);
+        var options = copyOptions(options, defaultSurfaceOptions);
 
         this.startDrawing(
             function cleanUp() {
@@ -1120,7 +1181,7 @@ var DrawHelper = (function() {
                 }
         }
 
-        Cesium.Polyline.prototype.setEditable = function() {
+        DrawHelper.PolylinePrimitive.prototype.setEditable = function() {
 
             var polyline = this;
             polyline.isPolygon = false;
@@ -1554,7 +1615,7 @@ var DrawHelper = (function() {
     })();
 
     _.prototype.addToolbar = function(container, options) {
-        options = fillOptions(options, {container: container});
+        options = copyOptions(options, {container: container});
         return new _.DrawHelperWidget(this, options);
     }
 
@@ -1631,7 +1692,20 @@ var DrawHelper = (function() {
                 options[option] = defaultOptions[option];
             }
         }
-        return options;
+    }
+
+    // shallow copy
+    function copyOptions(options, defaultOptions) {
+        var newOptions = {}, option;
+        for(option in options) {
+            newOptions[option] = options[option];
+        }
+        for(option in defaultOptions) {
+            if(newOptions[option] === undefined) {
+                newOptions[option] = defaultOptions[option];
+            }
+        }
+        return newOptions;
     }
 
     function setListener(primitive, type, callback) {
