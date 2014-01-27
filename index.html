@@ -97,16 +97,6 @@
                 geodesic: true
             });
             scene.getPrimitives().add(polyline);
-/*
-            var polylineCollection = new Cesium.PolylineCollection();
-            scene.getPrimitives().add(polylineCollection);
-            var polyline = polylineCollection.add();
-            var outlineMaterial = Cesium.Material.fromType(Cesium.Material.PolylineOutlineType);
-            outlineMaterial.uniforms.outlineWidth = 5.0;
-            polyline.setMaterial(outlineMaterial);
-            polyline.setWidth(5);
-            polyline.setPositions(event.positions);
-*/
             polyline.setEditable();
             polyline.addListener('onEdited', function(event) {
                 loggingMessage('Polyline edited, ' + event.positions.length + ' points');

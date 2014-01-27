@@ -241,6 +241,11 @@ var DrawHelper = (function() {
                 (this._textureRotationAngle !== this.textureRotationAngle) ||
                 (this._id !== this.id)) {
 
+                var geometry = this.getGeometry();
+                if(!geometry) {
+                    return;
+                }
+
                 this._createPrimitive = false;
                 this._ellipsoid = this.ellipsoid;
                 this._granularity = this.granularity;
@@ -252,7 +257,7 @@ var DrawHelper = (function() {
 
                 this._primitive = new Cesium.Primitive({
                     geometryInstances : new Cesium.GeometryInstance({
-                        geometry : this.getGeometry(),
+                        geometry : geometry,
                         id : this.id,
                         pickPrimitive : this
                     }),
@@ -264,6 +269,7 @@ var DrawHelper = (function() {
             var primitive = this._primitive;
             primitive.debugShowBoundingVolume = this.debugShowBoundingVolume;
             primitive.update(context, frameState, commandList);
+
         };
 
         _.prototype.isDestroyed = function() {
@@ -312,6 +318,7 @@ var DrawHelper = (function() {
         };
 
         _.prototype.getGeometry = function() {
+
             if (!(Cesium.defined(this.center) && Cesium.defined(this.radius))) {
                 return;
             }
@@ -413,8 +420,10 @@ var DrawHelper = (function() {
                 ellipsoidCartographicPath.push(geodesic.interpolateUsingSurfaceDistance(distance));
             }
         }
+        ellipsoidCartographicPath.push(cartographicPath[cartographicPath.length - 1]);
         return ellipsoid.cartographicArrayToCartesianArray(ellipsoidCartographicPath);
     }
+
 
     _.PolylinePrimitive = (function() {
         function _(options) {
@@ -708,7 +717,7 @@ var DrawHelper = (function() {
 
         this.startDrawing(
             function() {
-                primitives.remove(primitiveAdded);
+                primitives.remove(poly);
                 markers.remove();
                 mouseHandler.destroy();
                 tooltip.setVisible(false);
@@ -722,17 +731,13 @@ var DrawHelper = (function() {
 
         var minPoints = isPolygon ? 3 : 2;
         var poly;
-        var primitiveAdded;
         if(isPolygon) {
             poly = new Cesium.Polygon(options);
-            primitiveAdded = poly;
         } else {
-            primitiveAdded = new Cesium.PolylineCollection();
-            poly = primitiveAdded.add();
-            poly.material = options.material;
+            poly = new DrawHelper.PolylinePrimitive(options);
         }
         poly.asynchronous = false;
-        primitives.add(primitiveAdded);
+        primitives.add(poly);
 
         var positions = [];
         var markers = new _.BillboardGroup(this, defaultBillboard);
@@ -749,12 +754,12 @@ var DrawHelper = (function() {
                         positions.push(cartesian.clone());
                         markers.addBillboard(positions[0]);
                     }
-                    // add new point to polygon
-                    // this one will move with the mouse
-                    positions.push(cartesian);
                     if(positions.length >= minPoints) {
                         poly.setPositions(positions);
                     }
+                    // add new point to polygon
+                    // this one will move with the mouse
+                    positions.push(cartesian);
                     // add marker at the new position
                     markers.addBillboard(cartesian);
                 }
@@ -771,7 +776,7 @@ var DrawHelper = (function() {
                     if (cartesian) {
                         positions.pop();
                         // make sure it is slightly different
-                        cartesian.y += (1 + Math.random()) * Cesium.Math.EPSILON7;
+                        cartesian.y += (1 + Math.random());
                         positions.push(cartesian);
                         if(positions.length >= minPoints) {
                             poly.setPositions(positions);
@@ -1150,6 +1155,9 @@ var DrawHelper = (function() {
                                     editMarkers.insertBillboard(this.index, calculateHalfMarkerPosition(this.index), handleEditMarkerChanges);
                                     onEdited();
                                 }
+                            },
+                            tooltip: function() {
+                                return "Drag to create a new point";
                             }
                         };
                         editMarkers.addBillboards(halfPositions, handleEditMarkerChanges);
@@ -1167,6 +1175,32 @@ var DrawHelper = (function() {
                         // set on top of the polygon
                         markers.setOnTop();
                         editMarkers.setOnTop();
+/*
+                        // add frame controls
+                        function drawExtent() {
+                            var frameExtent = _self.getExtent();
+                            this._extent = scene.getPrimitives().add(new Cesium.Primitive({
+                                geometryInstances : new Cesium.GeometryInstance({
+                                        geometry : new Cesium.ExtentOutlineGeometry({
+                                            extent : frameExtent
+                                        }),
+                                    attributes : {
+                                        color : Cesium.ColorGeometryInstanceAttribute.fromColor(Cesium.Color.WHITE)
+                                    }
+                                }),
+                                appearance : new Cesium.PerInstanceColorAppearance({
+                                    flat : true,
+                                    renderState : {
+                                        depthTest : {
+                                            enabled : true
+                                        },
+                                        lineWidth : Math.min(4.0, scene.getContext().getMaximumAliasedLineWidth())
+                                    }
+                                })
+                            }));
+                        }
+                        drawExtent();
+*/
                     }
                     this._editMode = true;
                 } else {
@@ -1204,6 +1238,10 @@ var DrawHelper = (function() {
                 } else {
                     this.setWidth(originalWidth);
                 }
+            }
+
+            polyline.getExtent = function() {
+                return Cesium.Extent.fromCartographicArray(ellipsoid.cartesianArrayToCartographicArray(this.getPositions()));
             }
 
             enhanceWithListeners(polyline);
