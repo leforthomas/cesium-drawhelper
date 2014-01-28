@@ -14,13 +14,14 @@ Import the DrawHelper.js, DrawHelper.css and /img/ image files into your directo
 Instantiate a drawHelper passing it the CesiumWidget.
 
 You can:
-- use the self contained drawing widget by calling the drawHelper.addToolbar(container, options). This will add a drawing toolbar to the specified container. Options are for personalising the display of the shapes.
+- use the self contained drawing widget by calling the drawHelper.addToolbar(container, options). This will add a drawing toolbar to the specified container. Options are for personalising the display of the shapes. The toolbar issues one creation event per shape created. You can listen to those events by calling the addListener method.
 - use the startDrawXXX methods of DrawHelper to create shapes interactively
-- enable editing of your primitives (at the moment only Polygon, ExtentPrimitive and DrawHelper.CirclePrimitive) by calling their setEditMode method.
+- enable editing of your primitives (at the moment Billboard, Polygon, ExtentPrimitive, DrawHelper.CirclePrimitive, DrawHelper.EllipsePrimitive and DrawHelper.PolylinePrimitive) by calling their setEditable method.
+
+The toolbar can be customised at creation by passing an option object.
 
 Check the index.html example to get started.
 
 Check the website http://pad.geocento.com/DrawHelper/ for a live version.
 
-Future versions will include additional shapes (Polyline, Ellipse) creation and editing and hierarchical polygon editing and creation.
-
+Future versions will include shape dragging, scaling and rotation and support for hierarchical polygon editing.

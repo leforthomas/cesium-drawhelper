@@ -167,6 +167,9 @@ var DrawHelper = (function() {
         granularity: Math.PI / 180.0
     });
 
+    var defaultPolygonOptions = copyOptions(defaultShapeOptions, {});
+    var defaultExtentOptions = copyOptions(defaultShapeOptions, {});
+    var defaultCircleOptions = copyOptions(defaultShapeOptions, {});
     var defaultEllipseOptions = copyOptions(defaultSurfaceOptions, {rotation: 0});
 
     var defaultPolylineOptions = copyOptions(defaultShapeOptions, {
@@ -1548,36 +1551,10 @@ var DrawHelper = (function() {
                 polygonIcon: "./img/glyphicons_096_vector_path_polygon.png",
                 circleIcon: "./img/glyphicons_095_vector_path_circle.png",
                 extentIcon: "./img/glyphicons_094_vector_path_square.png",
-                polygonDrawingOptions: {
-                    material: new Cesium.Material({
-                        fabric : {
-                            type : 'Color',
-                            uniforms : {
-                                color : new Cesium.Color(1.0, 0.0, 1.0, 0.6)
-                            }
-                        }
-                    })
-                },
-                extentDrawingOptions: {
-                    material: new Cesium.Material({
-                        fabric : {
-                            type : 'Color',
-                            uniforms : {
-                                color : new Cesium.Color(0.0, 1.0, 0.0, 0.6)
-                            }
-                        }
-                    })
-                },
-                circleDrawingOptions: {
-                    material: new Cesium.Material({
-                        fabric : {
-                            type : 'Color',
-                            uniforms : {
-                                color : new Cesium.Color(0.0, 0.0, 1.0, 0.6)
-                            }
-                        }
-                    })
-                }
+                polylineDrawingOptions: defaultPolylineOptions,
+                polygonDrawingOptions: defaultPolygonOptions,
+                extentDrawingOptions: defaultExtentOptions,
+                circleDrawingOptions: defaultCircleOptions
             };
 
             fillOptions(options, drawOptions);
