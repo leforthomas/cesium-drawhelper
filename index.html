@@ -63,6 +63,7 @@
         // start the draw helper to enable shape creation and editing
         var drawHelper = new DrawHelper(cesiumWidget);
         var toolbar = drawHelper.addToolbar(document.getElementById("toolbar"), {
+            buttons: ['marker', 'polyline', 'polygon', 'circle', 'extent']
         });
         toolbar.addListener('markerCreated', function(event) {
             loggingMessage('Marker created at ' + event.position.toString());

@@ -1570,11 +1570,13 @@ var DrawHelper = (function() {
             }
 
             var drawOptions = {
+                buttons: [],
                 markerIcon: "./img/glyphicons_242_google_maps.png",
                 polylineIcon: "./img/glyphicons_097_vector_path_line.png",
                 polygonIcon: "./img/glyphicons_096_vector_path_polygon.png",
                 circleIcon: "./img/glyphicons_095_vector_path_circle.png",
                 extentIcon: "./img/glyphicons_094_vector_path_square.png",
+                clearIcon: "./img/glyphicons_067_cleaning.png",
                 polylineDrawingOptions: defaultPolylineOptions,
                 polygonDrawingOptions: defaultPolygonOptions,
                 extentDrawingOptions: defaultExtentOptions,
@@ -1605,45 +1607,64 @@ var DrawHelper = (function() {
 
             var scene = drawHelper._scene;
 
-            addIcon('marker', options.markerIcon, 'Click to start drawing a 2D marker', function() {
-                drawHelper.startDrawingMarker({
-                    callback: function(position) {
-                        _self.executeListeners({name: 'markerCreated', position: position});
-                    }
-                });
-            })
+            var index;
+            for(index = 0; index < options.buttons.length; index++) {
+                addButton(options.buttons[index]);
+            }
+            // add a clear button at the end
+            // add a divider first
+            var div = document.createElement('DIV');
+            div.className = 'divider';
+            toolbar.appendChild(div);
+            addIcon('clear', options.clearIcon, 'Remove all primitives', function() {
+                scene.getPrimitives().removeAll();
+            });
 
-            addIcon('polyline', options.polylineIcon, 'Click to start drawing a 2D polyline', function() {
-                drawHelper.startDrawingPolyline({
-                    callback: function(positions) {
-                        _self.executeListeners({name: 'polylineCreated', positions: positions});
-                    }
-                });
-            })
+            function addButton(button) {
 
-            addIcon('polygon', options.polygonIcon, 'Click to start drawing a 2D polygon', function() {
-                drawHelper.startDrawingPolygon({
-                    callback: function(positions) {
-                        _self.executeListeners({name: 'polygonCreated', positions: positions});
-                    }
-                });
-            })
+                if(button == 'marker') {
+                    addIcon('marker', options.markerIcon, 'Click to start drawing a 2D marker', function() {
+                        drawHelper.startDrawingMarker({
+                            callback: function(position) {
+                                _self.executeListeners({name: 'markerCreated', position: position});
+                            }
+                        });
+                    });
+                } else if(button == 'polyline') {
+                    addIcon('polyline', options.polylineIcon, 'Click to start drawing a 2D polyline', function() {
+                        drawHelper.startDrawingPolyline({
+                            callback: function(positions) {
+                                _self.executeListeners({name: 'polylineCreated', positions: positions});
+                            }
+                        });
+                    });
+                } else if(button == 'polygon') {
+                    addIcon('polygon', options.polygonIcon, 'Click to start drawing a 2D polygon', function() {
+                        drawHelper.startDrawingPolygon({
+                            callback: function(positions) {
+                                _self.executeListeners({name: 'polygonCreated', positions: positions});
+                            }
+                        });
+                    });
+                } else if(button == 'extent') {
+                    addIcon('extent', options.extentIcon, 'Click to start drawing an Extent', function() {
+                        drawHelper.startDrawingExtent({
+                            callback: function(extent) {
+                                _self.executeListeners({name: 'extentCreated', extent: extent});
+                            }
+                        });
+                    });
+                } else if(button == 'circle') {
+                    addIcon('circle', options.circleIcon, 'Click to start drawing a Circle', function() {
+                        drawHelper.startDrawingCircle({
+                            callback: function(center, radius) {
+                                _self.executeListeners({name: 'circleCreated', center: center, radius: radius});
+                            }
+                        });
+                    });
+                }
 
-            addIcon('extent', options.extentIcon, 'Click to start drawing an Extent', function() {
-                drawHelper.startDrawingExtent({
-                    callback: function(extent) {
-                        _self.executeListeners({name: 'extentCreated', extent: extent});
-                    }
-                });
-            })
-
-            addIcon('circle', options.circleIcon, 'Click to start drawing a Circle', function() {
-                drawHelper.startDrawingCircle({
-                    callback: function(center, radius) {
-                        _self.executeListeners({name: 'circleCreated', center: center, radius: radius});
-                    }
-                });
-            })
+            }
 
             enhanceWithListeners(this);
 
