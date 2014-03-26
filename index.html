@@ -69,9 +69,9 @@
             loggingMessage('Marker created at ' + event.position.toString());
             // create one common billboard collection for all billboards
             var b = new Cesium.BillboardCollection();
-            var a = scene.getContext().createTextureAtlas();
-            b.setTextureAtlas(a);
-            scene.getPrimitives().add(b);
+            var a = scene.context.createTextureAtlas();
+            b.textureAtlas = a;
+            scene.primitives.add(b);
             var image = new Image();
             image.onload = function() {
                 a.addImage(image);
@@ -97,7 +97,7 @@
                 width: 5,
                 geodesic: true
             });
-            scene.getPrimitives().add(polyline);
+            scene.primitives.add(polyline);
             polyline.setEditable();
             polyline.addListener('onEdited', function(event) {
                 loggingMessage('Polyline edited, ' + event.positions.length + ' points');
@@ -110,7 +110,7 @@
                 positions: event.positions,
                 material : Cesium.Material.fromType('Checkerboard')
             });
-            scene.getPrimitives().add(polygon);
+            scene.primitives.add(polygon);
             polygon.setEditable();
             polygon.addListener('onEdited', function(event) {
                 loggingMessage('Polygon edited, ' + event.positions.length + ' points');
@@ -124,7 +124,7 @@
                 radius: event.radius,
                 material: Cesium.Material.fromType(Cesium.Material.RimLightingType)
             });
-            scene.getPrimitives().add(circle);
+            scene.primitives.add(circle);
             circle.setEditable();
             circle.addListener('onEdited', function(event) {
                 loggingMessage('Circle edited: radius is ' + event.radius.toFixed(1) + ' meters');
@@ -137,7 +137,7 @@
                 extent: extent,
                 material: Cesium.Material.fromType(Cesium.Material.StripeType)
             });
-            scene.getPrimitives().add(extentPrimitive);
+            scene.primitives.add(extentPrimitive);
             extentPrimitive.setEditable();
             extentPrimitive.addListener('onEdited', function(event) {
                 loggingMessage('Extent edited: extent is (N: ' + event.extent.north.toFixed(3) + ', E: ' + event.extent.east.toFixed(3) + ', S: ' + event.extent.south.toFixed(3) + ', W: ' + event.extent.west.toFixed(3) + ')');
