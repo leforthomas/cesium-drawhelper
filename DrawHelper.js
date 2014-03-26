@@ -29,7 +29,7 @@ var DrawHelper = (function() {
         var scene = this._scene;
         var _self = this;
         // scene events
-        var handler = new Cesium.ScreenSpaceEventHandler(scene.getCanvas());
+        var handler = new Cesium.ScreenSpaceEventHandler(scene.canvas);
         function callPrimitiveCallback(name, position) {
             if(_self._handlersMuted == true) return;
             var pickedObject = scene.pick(position);
@@ -514,9 +514,9 @@ var DrawHelper = (function() {
 
         // create one common billboard collection for all billboards
         var b = new Cesium.BillboardCollection();
-        var a = this._scene.getContext().createTextureAtlas();
-        b.setTextureAtlas(a);
-        this._scene.getPrimitives().add(b);
+        var a = this._scene.context.createTextureAtlas();
+        b.textureAtlas = a;
+        this._scene.primitives.add(b);
         this._billboards = b;
         this._textureAtlas = a;
         // keep an ordered list of billboards
@@ -548,7 +548,7 @@ var DrawHelper = (function() {
         // if editable
         if(callbacks) {
             var _self = this;
-            var screenSpaceCameraController = this._scene.getScreenSpaceCameraController();
+            var screenSpaceCameraController = this._scene.screenSpaceCameraController;
             function enableRotation(enable) {
                 screenSpaceCameraController.enableRotate = enable;
             }
@@ -574,10 +574,10 @@ var DrawHelper = (function() {
                         callbacks.dragHandlers.onDragEnd && callbacks.dragHandlers.onDragEnd(getIndex(), position);
                     }
 
-                    var handler = new Cesium.ScreenSpaceEventHandler(_self._scene.getCanvas());
+                    var handler = new Cesium.ScreenSpaceEventHandler(_self._scene.canvas);
 
                     handler.setInputAction(function(movement) {
-                        var cartesian = _self._scene.getCamera().controller.pickEllipsoid(movement.endPosition, ellipsoid);
+                        var cartesian = _self._scene.camera.controller.pickEllipsoid(movement.endPosition, ellipsoid);
                         if (cartesian) {
                             onDrag(cartesian);
                         } else {
@@ -586,12 +586,12 @@ var DrawHelper = (function() {
                     }, Cesium.ScreenSpaceEventType.MOUSE_MOVE);
 
                     handler.setInputAction(function(movement) {
-                        onDragEnd(_self._scene.getCamera().controller.pickEllipsoid(movement.position, ellipsoid));
+                        onDragEnd(_self._scene.camera.controller.pickEllipsoid(movement.position, ellipsoid));
                     }, Cesium.ScreenSpaceEventType.LEFT_UP);
 
                     enableRotation(false);
 
-                    callbacks.dragHandlers.onDragStart && callbacks.dragHandlers.onDragStart(getIndex(), _self._scene.getCamera().controller.pickEllipsoid(position, ellipsoid));
+                    callbacks.dragHandlers.onDragStart && callbacks.dragHandlers.onDragStart(getIndex(), _self._scene.camera.controller.pickEllipsoid(position, ellipsoid));
                 });
             }
             if(callbacks.onDoubleClick) {
@@ -657,7 +657,7 @@ var DrawHelper = (function() {
     }
 
     _.BillboardGroup.prototype.setOnTop = function() {
-        this._scene.getPrimitives().raiseToTop(this._billboards);
+        this._scene.primitives.raiseToTop(this._billboards);
     }
 
     _.prototype.startDrawingMarker = function(options) {
@@ -674,17 +674,17 @@ var DrawHelper = (function() {
 
         var _self = this;
         var scene = this._scene;
-        var primitives = scene.getPrimitives();
+        var primitives = scene.primitives;
         var tooltip = this._tooltip;
 
         var markers = new _.BillboardGroup(this, options);
 
-        var mouseHandler = new Cesium.ScreenSpaceEventHandler(scene.getCanvas());
+        var mouseHandler = new Cesium.ScreenSpaceEventHandler(scene.canvas);
 
         // Now wait for start
         mouseHandler.setInputAction(function(movement) {
             if(movement.position != null) {
-                var cartesian = scene.getCamera().controller.pickEllipsoid(movement.position, ellipsoid);
+                var cartesian = scene.camera.controller.pickEllipsoid(movement.position, ellipsoid);
                 if (cartesian) {
                     markers.addBillboard(cartesian);
                     _self.stopDrawing();
@@ -696,7 +696,7 @@ var DrawHelper = (function() {
         mouseHandler.setInputAction(function(movement) {
             var position = movement.endPosition;
             if(position != null) {
-                var cartesian = scene.getCamera().controller.pickEllipsoid(position, ellipsoid);
+                var cartesian = scene.camera.controller.pickEllipsoid(position, ellipsoid);
                 if (cartesian) {
                     tooltip.showAt(position, "<p>Click to add your marker. Position is: </p>" + getDisplayLatLngString(ellipsoid.cartesianToCartographic(cartesian)));
                 } else {
@@ -730,7 +730,7 @@ var DrawHelper = (function() {
 
         var _self = this;
         var scene = this._scene;
-        var primitives = scene.getPrimitives();
+        var primitives = scene.primitives;
         var tooltip = this._tooltip;
 
         var minPoints = isPolygon ? 3 : 2;
@@ -746,12 +746,12 @@ var DrawHelper = (function() {
         var positions = [];
         var markers = new _.BillboardGroup(this, defaultBillboard);
 
-        var mouseHandler = new Cesium.ScreenSpaceEventHandler(scene.getCanvas());
+        var mouseHandler = new Cesium.ScreenSpaceEventHandler(scene.canvas);
 
         // Now wait for start
         mouseHandler.setInputAction(function(movement) {
             if(movement.position != null) {
-                var cartesian = scene.getCamera().controller.pickEllipsoid(movement.position, ellipsoid);
+                var cartesian = scene.camera.controller.pickEllipsoid(movement.position, ellipsoid);
                 if (cartesian) {
                     // first click
                     if(positions.length == 0) {
@@ -776,7 +776,7 @@ var DrawHelper = (function() {
                 if(positions.length == 0) {
                     tooltip.showAt(position, "<p>Click to add first point</p>");
                 } else {
-                    var cartesian = scene.getCamera().controller.pickEllipsoid(position, ellipsoid);
+                    var cartesian = scene.camera.controller.pickEllipsoid(position, ellipsoid);
                     if (cartesian) {
                         positions.pop();
                         // make sure it is slightly different
@@ -800,7 +800,7 @@ var DrawHelper = (function() {
                 if(positions.length < minPoints + 2) {
                     return;
                 } else {
-                    var cartesian = scene.getCamera().controller.pickEllipsoid(position, ellipsoid);
+                    var cartesian = scene.camera.controller.pickEllipsoid(position, ellipsoid);
                     if (cartesian) {
                         _self.stopDrawing();
                         if(typeof options.callback == 'function') {
@@ -835,14 +835,14 @@ var DrawHelper = (function() {
 
         var _self = this;
         var scene = this._scene;
-        var primitives = this._scene.getPrimitives();
+        var primitives = this._scene.primitives;
         var tooltip = this._tooltip;
 
         var firstPoint = null;
         var extent = null;
         var markers = null;
 
-        var mouseHandler = new Cesium.ScreenSpaceEventHandler(scene.getCanvas());
+        var mouseHandler = new Cesium.ScreenSpaceEventHandler(scene.canvas);
 
         function updateExtent(value) {
             if(extent == null) {
@@ -865,7 +865,7 @@ var DrawHelper = (function() {
         // Now wait for start
         mouseHandler.setInputAction(function(movement) {
             if(movement.position != null) {
-                var cartesian = scene.getCamera().controller.pickEllipsoid(movement.position, ellipsoid);
+                var cartesian = scene.camera.controller.pickEllipsoid(movement.position, ellipsoid);
                 if (cartesian) {
                     if(extent == null) {
                         // create the rectangle
@@ -888,7 +888,7 @@ var DrawHelper = (function() {
                 if(extent == null) {
                     tooltip.showAt(position, "<p>Click to start drawing rectangle</p>");
                 } else {
-                    var cartesian = scene.getCamera().controller.pickEllipsoid(position, ellipsoid);
+                    var cartesian = scene.camera.controller.pickEllipsoid(position, ellipsoid);
                     if (cartesian) {
                         var value = getExtent(firstPoint, ellipsoid.cartesianToCartographic(cartesian));
                         updateExtent(value);
@@ -917,18 +917,18 @@ var DrawHelper = (function() {
 
         var _self = this;
         var scene = this._scene;
-        var primitives = this._scene.getPrimitives();
+        var primitives = this._scene.primitives;
         var tooltip = this._tooltip;
 
         var circle = null;
         var markers = null;
 
-        var mouseHandler = new Cesium.ScreenSpaceEventHandler(scene.getCanvas());
+        var mouseHandler = new Cesium.ScreenSpaceEventHandler(scene.canvas);
 
         // Now wait for start
         mouseHandler.setInputAction(function(movement) {
             if(movement.position != null) {
-                var cartesian = scene.getCamera().controller.pickEllipsoid(movement.position, ellipsoid);
+                var cartesian = scene.camera.controller.pickEllipsoid(movement.position, ellipsoid);
                 if (cartesian) {
                     if(circle == null) {
                         // create the circle
@@ -959,7 +959,7 @@ var DrawHelper = (function() {
                 if(circle == null) {
                     tooltip.showAt(position, "<p>Click to start drawing the circle</p>");
                 } else {
-                    var cartesian = scene.getCamera().controller.pickEllipsoid(position, ellipsoid);
+                    var cartesian = scene.camera.controller.pickEllipsoid(position, ellipsoid);
                     if (cartesian) {
                         circle.setRadius(Cesium.Cartesian3.distance(circle.getCenter(), cartesian));
                         markers.updateBillboardsPositions(cartesian);
@@ -988,7 +988,7 @@ var DrawHelper = (function() {
             var _self = this;
 
             function enableRotation(enable) {
-                drawHelper._scene.getScreenSpaceCameraController().enableRotate = enable;
+                drawHelper._scene.screenSpaceCameraController.enableRotate = enable;
             }
 
             setListener(billboard, 'leftDown', function(position) {
@@ -1004,10 +1004,10 @@ var DrawHelper = (function() {
                     _self.executeListeners({name: 'dragEnd', positions: position});
                 }
 
-                var handler = new Cesium.ScreenSpaceEventHandler(drawHelper._scene.getCanvas());
+                var handler = new Cesium.ScreenSpaceEventHandler(drawHelper._scene.canvas);
 
                 handler.setInputAction(function(movement) {
-                    var cartesian = drawHelper._scene.getCamera().controller.pickEllipsoid(movement.endPosition, ellipsoid);
+                    var cartesian = drawHelper._scene.camera.controller.pickEllipsoid(movement.endPosition, ellipsoid);
                     if (cartesian) {
                         onDrag(cartesian);
                     } else {
@@ -1016,7 +1016,7 @@ var DrawHelper = (function() {
                 }, Cesium.ScreenSpaceEventType.MOUSE_MOVE);
 
                 handler.setInputAction(function(movement) {
-                    onDragEnd(drawHelper._scene.getCamera().controller.pickEllipsoid(movement.position, ellipsoid));
+                    onDragEnd(drawHelper._scene.camera.controller.pickEllipsoid(movement.position, ellipsoid));
                 }, Cesium.ScreenSpaceEventType.LEFT_UP);
 
                 enableRotation(false);
@@ -1040,7 +1040,7 @@ var DrawHelper = (function() {
             if(this._editMode === true) {
                 return;
             }
-            var primitives = scene.getPrimitives();
+            var primitives = scene.primitives;
             // highlight by creating an outline polygon matching the polygon points
             if(highlighted) {
                 // make sure all other shapes are not highlighted
@@ -1059,7 +1059,7 @@ var DrawHelper = (function() {
                             depthTest : {
                                 enabled : true
                             },
-                            lineWidth : Math.min(4.0, scene.getContext().getMaximumAliasedLineWidth())
+                            lineWidth : Math.min(4.0, scene.context.getMaximumAliasedLineWidth())
                         }
                     })
                 }));
@@ -1174,7 +1174,7 @@ var DrawHelper = (function() {
                     editMarkers.addBillboards(halfPositions, handleEditMarkerChanges);
                     this._editMarkers = editMarkers;
                     // add a handler for clicking in the globe
-                    this._globeClickhandler = new Cesium.ScreenSpaceEventHandler(scene.getCanvas());
+                    this._globeClickhandler = new Cesium.ScreenSpaceEventHandler(scene.canvas);
                     this._globeClickhandler.setInputAction(
                         function (movement) {
                             var pickedObject = scene.pick(movement.position);
@@ -1339,7 +1339,7 @@ var DrawHelper = (function() {
                         markers.addBillboards(getCorners(extent.extent), handleMarkerChanges);
                         this._markers = markers;
                         // add a handler for clicking in the globe
-                        this._globeClickhandler = new Cesium.ScreenSpaceEventHandler(scene.getCanvas());
+                        this._globeClickhandler = new Cesium.ScreenSpaceEventHandler(scene.canvas);
                         this._globeClickhandler.setInputAction(
                             function (movement) {
                                 var pickedObject = scene.pick(movement.position);
@@ -1431,7 +1431,7 @@ var DrawHelper = (function() {
                         markers.addBillboards(getMarkerPositions(), handleMarkerChanges);
                         this._markers = markers;
                         // add a handler for clicking in the globe
-                        this._globeClickhandler = new Cesium.ScreenSpaceEventHandler(scene.getCanvas());
+                        this._globeClickhandler = new Cesium.ScreenSpaceEventHandler(scene.canvas);
                         this._globeClickhandler.setInputAction(
                             function (movement) {
                                 var pickedObject = scene.pick(movement.position);
@@ -1520,7 +1520,7 @@ var DrawHelper = (function() {
                         markers.addBillboards(getMarkerPositions(), handleMarkerChanges);
                         this._markers = markers;
                         // add a handler for clicking in the globe
-                        this._globeClickhandler = new Cesium.ScreenSpaceEventHandler(scene.getCanvas());
+                        this._globeClickhandler = new Cesium.ScreenSpaceEventHandler(scene.canvas);
                         this._globeClickhandler.setInputAction(
                             function (movement) {
                                 var pickedObject = scene.pick(movement.position);
@@ -1617,7 +1617,7 @@ var DrawHelper = (function() {
             div.className = 'divider';
             toolbar.appendChild(div);
             addIcon('clear', options.clearIcon, 'Remove all primitives', function() {
-                scene.getPrimitives().removeAll();
+                scene.primitives.removeAll();
             });
 
             function addButton(button) {
