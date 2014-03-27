@@ -69,7 +69,34 @@ css rules for the draw helper components
     background: #eee;
 }
 
-.toolbar > .divider {
-    margin: 10px 5px;
-    border-top: 1px solid grey;
+/*
+css rules for the infowindow
+*/
+
+.infoWindow {
+    position: absolute;
+    min-width: 100px;
+    max-width: 300px;
 }
+.infoWindow #frame {
+    padding: 10px;
+    border: 1px solid black;
+    background: white;
+}
+.infoWindow #close {
+    float: right;
+    margin: 5px 2px;
+    font-size: small;
+    color: gray;
+    cursor: pointer;
+}
+.infoWindow #arrow {
+    position: absolute;
+    bottom: -8px;
+    left: 50%;
+    margin-left: -10px;
+    border-right: 10px solid transparent;
+    border-left: 10px solid transparent;
+    border-top: 10px solid white;
+}
+
