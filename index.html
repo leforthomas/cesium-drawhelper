@@ -54,20 +54,18 @@
 
 <script>
 
-    Cesium.BingMapsApi.defaultKey = 'AgVponCiOIcztTV3i0JC5gknsMO-x4RMrWOMPwoRLOfzi0kwdAQfol4Qsu9AYxSg';
-
     function start() {
         // create the almighty cesium widget
-        var cesiumWidget = new Cesium.CesiumWidget('cesiumContainer');
+        var cesiumWidget = new Cesium.CesiumWidget('cesiumContainer', {scene3DOnly: true});
         var scene = cesiumWidget.scene;
 
         // add terrain elevation
         var cesiumTerrainProviderHeightmaps = new Cesium.CesiumTerrainProvider({
-            url : 'http://cesiumjs.org/smallterrain',
+            url : 'https://cesiumjs.org/tilesets/terrain/smallterrain',
             credit : 'Terrain data courtesy Analytical Graphics, Inc.'
         });
 
-        scene.primitives.centralBody.terrainProvider = cesiumTerrainProviderHeightmaps;
+        scene.terrainProvider = cesiumTerrainProviderHeightmaps;
 
         // start the draw helper to enable shape creation and editing
         var drawHelper = new DrawHelper(cesiumWidget);
@@ -78,14 +76,7 @@
             loggingMessage('Marker created at ' + event.position.toString());
             // create one common billboard collection for all billboards
             var b = new Cesium.BillboardCollection();
-            var a = scene.context.createTextureAtlas();
-            b.textureAtlas = a;
             scene.primitives.add(b);
-            var image = new Image();
-            image.onload = function() {
-                a.addImage(image);
-            };
-            image.src = './img/glyphicons_242_google_maps.png';
             var billboard = b.add({
                 show : true,
                 position : event.position,
@@ -94,7 +85,7 @@
                 horizontalOrigin : Cesium.HorizontalOrigin.CENTER,
                 verticalOrigin : Cesium.VerticalOrigin.CENTER,
                 scale : 1.0,
-                imageIndex : 0,
+                image: './img/glyphicons_242_google_maps.png',
                 color : new Cesium.Color(1.0, 1.0, 1.0, 1.0)
             });
             billboard.setEditable();
