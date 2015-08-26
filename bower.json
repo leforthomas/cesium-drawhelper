@@ -1,0 +1,21 @@
+{
+  "name": "cesium-drawhelper",
+  "version": "0.0.0",
+  "homepage": "https://github.com/leforthomas/cesium-drawhelper",
+  "authors": [
+  "Thomas Lefort"
+  ],
+  "description": "A very early stage shape editor for Cesium. Currently limited to 2D and simple shapes.",
+  "main": ["DrawHelper.js", "DrawHelper.css"],
+  "keywords": [
+    "cesiumjs"
+  ],
+  "license": "Apache 2.0",
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "test",
+    "tests"
+  ]
+}
