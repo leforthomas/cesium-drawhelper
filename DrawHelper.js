@@ -1292,12 +1292,86 @@ var DrawHelper = (function() {
                         };
                         editMarkers.addBillboards(halfPositions, handleEditMarkerChanges);
                         this._editMarkers = editMarkers;
-                        // add a handler for clicking in the globe
-                        this._globeClickhandler = new Cesium.ScreenSpaceEventHandler(scene.canvas);
-                        this._globeClickhandler.setInputAction(
+
+                        function enableRotation(enable) {
+                            scene.screenSpaceCameraController.enableRotate = enable;
+                        }
+
+                        var handlePrimitiveChanges = {
+                            dragHandlers: {
+                                onDragStart: function onDragStart(position) {
+                                    //// INTIALIZE DRAGGING-OPERATION
+
+                                    enableRotation(false);
+
+                                    _self._screenSpaceEventHandler.setInputAction(function _handleMouseMove(movement) {
+                                        var cartesian = scene.camera.pickEllipsoid(movement.endPosition, ellipsoid);
+                                        if (cartesian) {
+                                            handlePrimitiveChanges.dragHandlers.onDrag(cartesian);
+                                        } else {
+                                            handlePrimitiveChanges.dragHandlers.onDragEnd(cartesian);
+                                        }
+                                    }, Cesium.ScreenSpaceEventType.MOUSE_MOVE);
+
+                                    _self._screenSpaceEventHandler.setInputAction(function _handleMouseUp(movement) {
+                                        //var pickedObject = scene.pick(movement.position);
+                                        //if (pickedObject && pickedObject.primitive) {
+                                        var cartesian = scene.camera.pickEllipsoid(movement.position, ellipsoid);
+                                        handlePrimitiveChanges.dragHandlers.onDragEnd(cartesian);
+                                        //}
+                                    }, Cesium.ScreenSpaceEventType.LEFT_UP);
+
+                                    // setup dragging-operation
+                                    _self._initialPrimitiveDragPosition = position;
+                                },
+                                onDrag: function onDrag(position) {
+                                    //// UPDATE DRAGGING-OPERATION
+                                    //var translation = Cesium.Cartesian3.subtract(position, _self._initialPrimitiveDragPosition, new Cesium.Cartesian3());
+                                    // update primitive position
+                                    // update markers
+                                },
+                                onDragEnd: function onDragEnd(position) {
+                                    //// FINALIZE DRAGGING-OPERATION
+                                    var translation = Cesium.Cartesian3.subtract(position, _self._initialPrimitiveDragPosition, new Cesium.Cartesian3());
+                                    // update primitive position
+                                    // update markers
+
+                                    var index = 0;
+                                    var length = _self.positions.length + (_self.isPolygon ? 0 : -1);
+                                    for(; index < length; index++) {
+                                        Cesium.Cartesian3.add(_self.positions[index], translation, _self.positions[index]);
+                                    }
+                                    // I think I need to do this to get DrawHelpers internals to update...
+                                    _self._createPrimitive = true;
+
+                                    onEdited();
+
+                                    _self._screenSpaceEventHandler.removeInputAction(Cesium.ScreenSpaceEventType.MOUSE_MOVE);
+                                    _self._screenSpaceEventHandler.removeInputAction(Cesium.ScreenSpaceEventType.LEFT_UP);
+
+                                    enableRotation(true);
+
+                                    //// cleanup dragging-operation
+                                    delete _self._initialPrimitiveDragPosition;
+                                }
+                            }
+                        };
+
+                        // add a handler for ...
+                        this._screenSpaceEventHandler = new Cesium.ScreenSpaceEventHandler(scene.canvas);
+                        this._screenSpaceEventHandler.setInputAction(function _handleMouseDown(movement) {
+                            var pickedObject = scene.pick(movement.position);
+                            if (pickedObject && pickedObject.primitive) {
+                                var cartesian = scene.camera.pickEllipsoid(movement.position, ellipsoid);
+                                handlePrimitiveChanges.dragHandlers.onDragStart(cartesian);
+                            }
+                        }, Cesium.ScreenSpaceEventType.LEFT_DOWN);
+
+                        this._screenSpaceEventHandler.setInputAction(
                             function (movement) {
                                 var pickedObject = scene.pick(movement.position);
-                                if(!(pickedObject && pickedObject.primitive)) {
+                                if (!(pickedObject && pickedObject.primitive)) {
+                                    // user clicked the globe; cancel the edit mode
                                     _self.setEditMode(false);
                                 }
                             }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
@@ -1313,7 +1387,7 @@ var DrawHelper = (function() {
                         this._editMarkers.remove();
                         this._markers = null;
                         this._editMarkers = null;
-                        this._globeClickhandler.destroy();
+                        this._screenSpaceEventHandler.destroy();
                     }
                     this._editMode = false;
                 }
