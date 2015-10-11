@@ -1361,7 +1361,7 @@ var DrawHelper = (function() {
                         this._screenSpaceEventHandler = new Cesium.ScreenSpaceEventHandler(scene.canvas);
                         this._screenSpaceEventHandler.setInputAction(function _handleMouseDown(movement) {
                             var pickedObject = scene.pick(movement.position);
-                            if (pickedObject && pickedObject.primitive) {
+                            if (pickedObject && pickedObject.primitive && pickedObject.primitive === _self) {
                                 var cartesian = scene.camera.pickEllipsoid(movement.position, ellipsoid);
                                 handlePrimitiveChanges.dragHandlers.onDragStart(cartesian);
                             }
