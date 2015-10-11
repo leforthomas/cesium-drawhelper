@@ -675,10 +675,6 @@ var DrawHelper = (function() {
         // if editable
         if(callbacks) {
             var _self = this;
-            var screenSpaceCameraController = this._scene.screenSpaceCameraController;
-            function enableRotation(enable) {
-                screenSpaceCameraController.enableRotate = enable;
-            }
             function getIndex() {
                 // find index
                 for (var i = 0, I = _self._orderedBillboards.length; i < I && _self._orderedBillboards[i] != billboard; ++i);
@@ -697,7 +693,7 @@ var DrawHelper = (function() {
                     }
                     function onDragEnd(position) {
                         handler.destroy();
-                        enableRotation(true);
+                        _self._scene.screenSpaceCameraController.enableInputs = true;
                         callbacks.dragHandlers.onDragEnd && callbacks.dragHandlers.onDragEnd(getIndex(), position);
                     }
 
@@ -716,7 +712,7 @@ var DrawHelper = (function() {
                         onDragEnd(_self._scene.camera.pickEllipsoid(movement.position, ellipsoid));
                     }, Cesium.ScreenSpaceEventType.LEFT_UP);
 
-                    enableRotation(false);
+                    _self._scene.screenSpaceCameraController.enableInputs = false;
 
                     callbacks.dragHandlers.onDragStart && callbacks.dragHandlers.onDragStart(getIndex(), _self._scene.camera.pickEllipsoid(position, ellipsoid));
                 });
@@ -1118,10 +1114,6 @@ var DrawHelper = (function() {
 
             var _self = this;
 
-            function enableRotation(enable) {
-                drawHelper._scene.screenSpaceCameraController.enableRotate = enable;
-            }
-
             setListener(billboard, 'leftDown', function(position) {
                 // TODO - start the drag handlers here
                 // create handlers for mouseOut and leftUp for the billboard and a mouseMove
@@ -1131,7 +1123,7 @@ var DrawHelper = (function() {
                 }
                 function onDragEnd(position) {
                     handler.destroy();
-                    enableRotation(true);
+                    drawHelper._scene.screenSpaceCameraController.enableInputs = true;
                     _self.executeListeners({name: 'dragEnd', positions: position});
                 }
 
@@ -1150,8 +1142,7 @@ var DrawHelper = (function() {
                     onDragEnd(drawHelper._scene.camera.pickEllipsoid(movement.position, ellipsoid));
                 }, Cesium.ScreenSpaceEventType.LEFT_UP);
 
-                enableRotation(false);
-
+                drawHelper._scene.screenSpaceCameraController.enableInputs = false;
             });
 
             enhanceWithListeners(billboard);
@@ -1220,6 +1211,9 @@ var DrawHelper = (function() {
                         }
                         var handleMarkerChanges = {
                             dragHandlers: {
+                                onDragStart: function(index, position) {
+                                    _self._handlingDragOperation = true;
+                                },
                                 onDrag: function(index, position) {
                                     _self.positions[index] = position;
                                     updateHalfMarkers(index, _self.positions);
@@ -1227,6 +1221,7 @@ var DrawHelper = (function() {
                                 },
                                 onDragEnd: function(index, position) {
                                     _self._createPrimitive = true;
+                                    delete _self._handlingDragOperation;
                                     onEdited();
                                 }
                             },
@@ -1268,6 +1263,7 @@ var DrawHelper = (function() {
                         var handleEditMarkerChanges = {
                             dragHandlers: {
                                 onDragStart: function(index, position) {
+                                    _self._handlingDragOperation = true;
                                     // add a new position to the polygon but not a new marker yet
                                     this.index = index + 1;
                                     _self.positions.splice(this.index, 0, position);
@@ -1283,6 +1279,7 @@ var DrawHelper = (function() {
                                     editMarkers.getBillboard(this.index - 1).position = calculateHalfMarkerPosition(this.index - 1);
                                     editMarkers.insertBillboard(this.index, calculateHalfMarkerPosition(this.index), handleEditMarkerChanges);
                                     _self._createPrimitive = true;
+                                    delete _self._handlingDragOperation;
                                     onEdited();
                                 }
                             },
@@ -1293,36 +1290,32 @@ var DrawHelper = (function() {
                         editMarkers.addBillboards(halfPositions, handleEditMarkerChanges);
                         this._editMarkers = editMarkers;
 
-                        function enableRotation(enable) {
-                            scene.screenSpaceCameraController.enableRotate = enable;
-                        }
-
                         var handlePrimitiveChanges = {
                             dragHandlers: {
                                 onDragStart: function onDragStart(position) {
                                     //// INTIALIZE DRAGGING-OPERATION
 
-                                    enableRotation(false);
+                                    // setup dragging-operation
+                                    _self._initialPrimitiveDragPosition = position;
+                                    _self._handlingDragOperation = true;
+
+                                    scene.screenSpaceCameraController.enableInputs = false;
 
                                     _self._screenSpaceEventHandler.setInputAction(function _handleMouseMove(movement) {
-                                        var cartesian = scene.camera.pickEllipsoid(movement.endPosition, ellipsoid);
-                                        if (cartesian) {
-                                            handlePrimitiveChanges.dragHandlers.onDrag(cartesian);
+                                        var position = scene.camera.pickEllipsoid(movement.endPosition, ellipsoid);
+                                        if (position) {
+                                            position = ellipsoid.cartesianToCartographic(position);
+                                            handlePrimitiveChanges.dragHandlers.onDrag(position);
                                         } else {
-                                            handlePrimitiveChanges.dragHandlers.onDragEnd(cartesian);
+                                            handlePrimitiveChanges.dragHandlers.onDragEnd();
                                         }
                                     }, Cesium.ScreenSpaceEventType.MOUSE_MOVE);
 
                                     _self._screenSpaceEventHandler.setInputAction(function _handleMouseUp(movement) {
-                                        //var pickedObject = scene.pick(movement.position);
-                                        //if (pickedObject && pickedObject.primitive) {
-                                        var cartesian = scene.camera.pickEllipsoid(movement.position, ellipsoid);
-                                        handlePrimitiveChanges.dragHandlers.onDragEnd(cartesian);
-                                        //}
+                                        var position = scene.camera.pickEllipsoid(movement.position, ellipsoid);
+                                        position = ellipsoid.cartesianToCartographic(position);
+                                        handlePrimitiveChanges.dragHandlers.onDragEnd(position);
                                     }, Cesium.ScreenSpaceEventType.LEFT_UP);
-
-                                    // setup dragging-operation
-                                    _self._initialPrimitiveDragPosition = position;
                                 },
                                 onDrag: function onDrag(position) {
                                     //// UPDATE DRAGGING-OPERATION
@@ -1332,16 +1325,35 @@ var DrawHelper = (function() {
                                 },
                                 onDragEnd: function onDragEnd(position) {
                                     //// FINALIZE DRAGGING-OPERATION
-                                    var translation = Cesium.Cartesian3.subtract(position, _self._initialPrimitiveDragPosition, new Cesium.Cartesian3());
+                                    var translation = new Cesium.Cartesian2(position.longitude - _self._initialPrimitiveDragPosition.longitude, position.latitude - _self._initialPrimitiveDragPosition.latitude);
+
                                     // update primitive position
                                     // update markers
 
+                                    // update polygon primitive positions
+                                    // update point marker positions
                                     var index = 0;
                                     var length = _self.positions.length + (_self.isPolygon ? 0 : -1);
+                                    var positionCart = new Cesium.Cartographic();
+                                    var billboard;
                                     for(; index < length; index++) {
-                                        Cesium.Cartesian3.add(_self.positions[index], translation, _self.positions[index]);
+                                        ellipsoid.cartesianToCartographic(_self.positions[index], positionCart);
+                                        positionCart.longitude += translation.x;
+                                        positionCart.latitude += translation.y;
+                                        ellipsoid.cartographicToCartesian(positionCart, _self.positions[index]);
+                                        billboard = _self._markers.getBillboard(index);
+                                        // there may not be a billboard yet if e.g. the user is adding a point
+                                        if (billboard) {
+                                            billboard.position = ellipsoid.cartographicToCartesian(positionCart);
+                                        }
                                     }
-                                    // I think I need to do this to get DrawHelpers internals to update...
+
+                                    // update "edit" ("creation"; mid/half) point marker positions
+                                    length = _self._editMarkers.countBillboards();
+                                    for(index = 0; index < length; index++) {
+                                        _self._editMarkers.getBillboard(index).position = calculateHalfMarkerPosition(index);
+                                    }
+
                                     _self._createPrimitive = true;
 
                                     onEdited();
@@ -1349,9 +1361,10 @@ var DrawHelper = (function() {
                                     _self._screenSpaceEventHandler.removeInputAction(Cesium.ScreenSpaceEventType.MOUSE_MOVE);
                                     _self._screenSpaceEventHandler.removeInputAction(Cesium.ScreenSpaceEventType.LEFT_UP);
 
-                                    enableRotation(true);
+                                    scene.screenSpaceCameraController.enableInputs = true;
 
                                     //// cleanup dragging-operation
+                                    delete _self._handlingDragOperation;
                                     delete _self._initialPrimitiveDragPosition;
                                 }
                             }
@@ -1361,9 +1374,9 @@ var DrawHelper = (function() {
                         this._screenSpaceEventHandler = new Cesium.ScreenSpaceEventHandler(scene.canvas);
                         this._screenSpaceEventHandler.setInputAction(function _handleMouseDown(movement) {
                             var pickedObject = scene.pick(movement.position);
-                            if (pickedObject && pickedObject.primitive && pickedObject.primitive === _self) {
-                                var cartesian = scene.camera.pickEllipsoid(movement.position, ellipsoid);
-                                handlePrimitiveChanges.dragHandlers.onDragStart(cartesian);
+                            if (pickedObject && pickedObject.primitive && pickedObject.primitive === _self && !_self._handlingDragOperation) {
+                                var position = ellipsoid.cartesianToCartographic(scene.camera.pickEllipsoid(movement.position, ellipsoid));
+                                handlePrimitiveChanges.dragHandlers.onDragStart(position);
                             }
                         }, Cesium.ScreenSpaceEventType.LEFT_DOWN);
 
