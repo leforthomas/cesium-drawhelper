@@ -1319,9 +1319,40 @@ var DrawHelper = (function() {
                                 },
                                 onDrag: function onDrag(position) {
                                     //// UPDATE DRAGGING-OPERATION
-                                    //var translation = Cesium.Cartesian3.subtract(position, _self._initialPrimitiveDragPosition, new Cesium.Cartesian3());
+                                    var translation = new Cesium.Cartesian2(position.longitude - _self._initialPrimitiveDragPosition.longitude, position.latitude - _self._initialPrimitiveDragPosition.latitude);
+
                                     // update primitive position
                                     // update markers
+
+                                    // update polygon primitive positions
+                                    // update point marker positions
+                                    var index = 0;
+                                    var length = _self.positions.length + (_self.isPolygon ? 0 : -1);
+                                    var positionCart = new Cesium.Cartographic();
+                                    var billboard;
+                                    for(; index < length; index++) {
+                                        ellipsoid.cartesianToCartographic(_self.positions[index], positionCart);
+                                        positionCart.longitude += translation.x;
+                                        positionCart.latitude += translation.y;
+                                        ellipsoid.cartographicToCartesian(positionCart, _self.positions[index]);
+                                        billboard = _self._markers.getBillboard(index);
+                                        // there may not be a billboard yet if e.g. the user is adding a point
+                                        if (billboard) {
+                                            billboard.position = ellipsoid.cartographicToCartesian(positionCart);
+                                        }
+                                    }
+
+                                    // update "edit" ("creation"; mid/half) point marker positions
+                                    length = _self._editMarkers.countBillboards();
+                                    for(index = 0; index < length; index++) {
+                                        _self._editMarkers.getBillboard(index).position = calculateHalfMarkerPosition(index);
+                                    }
+
+                                    _self._createPrimitive = true;
+
+                                    onEdited();
+
+                                    _self._initialPrimitiveDragPosition = position;
                                 },
                                 onDragEnd: function onDragEnd(position) {
                                     //// FINALIZE DRAGGING-OPERATION
