@@ -1218,15 +1218,29 @@ var DrawHelper = (function() {
                             dragHandlers: {
                                 onDragStart: function(index, position) {
                                     _self._handlingDragOperation = true;
+
+                                    _self.positions[index] = position;
+                                    updateHalfMarkers(index, _self.positions);
+                                    _self._createPrimitive = true;
+
+                                    onEdited();
                                 },
                                 onDrag: function(index, position) {
                                     _self.positions[index] = position;
                                     updateHalfMarkers(index, _self.positions);
                                     _self._createPrimitive = true;
+
+                                    onEdited();
                                 },
                                 onDragEnd: function(index, position) {
-                                    _self._createPrimitive = true;
+                                    if (position) {
+                                        _self.positions[index] = position;
+                                        updateHalfMarkers(index, _self.positions);
+                                        _self._createPrimitive = true;
+                                    }
+
                                     delete _self._handlingDragOperation;
+
                                     onEdited();
                                 }
                             },
@@ -1269,14 +1283,19 @@ var DrawHelper = (function() {
                             dragHandlers: {
                                 onDragStart: function(index, position) {
                                     _self._handlingDragOperation = true;
+
                                     // add a new position to the polygon but not a new marker yet
                                     this.index = index + 1;
                                     _self.positions.splice(this.index, 0, position);
                                     _self._createPrimitive = true;
+
+                                    onEdited();
                                 },
                                 onDrag: function(index, position) {
                                     _self.positions[this.index] = position;
                                     _self._createPrimitive = true;
+
+                                    onEdited();
                                 },
                                 onDragEnd: function(index, position) {
                                     // create new sets of makers for editing
@@ -1284,7 +1303,9 @@ var DrawHelper = (function() {
                                     editMarkers.getBillboard(this.index - 1).position = calculateHalfMarkerPosition(this.index - 1);
                                     editMarkers.insertBillboard(this.index, calculateHalfMarkerPosition(this.index), handleEditMarkerChanges);
                                     _self._createPrimitive = true;
+
                                     delete _self._handlingDragOperation;
+
                                     onEdited();
                                 }
                             },
@@ -1301,8 +1322,8 @@ var DrawHelper = (function() {
                                     //// INTIALIZE DRAGGING-OPERATION
 
                                     // setup dragging-operation
-                                    _self._initialPrimitiveDragPosition = position;
                                     _self._handlingDragOperation = true;
+                                    _self._initialPrimitiveDragPosition = position;
 
                                     scene.screenSpaceCameraController.enableInputs = false;
 
