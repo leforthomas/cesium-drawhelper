@@ -392,6 +392,7 @@ var DrawHelper = (function() {
 
         _.prototype.setPositions = function(positions) {
             this.setAttribute('positions', positions);
+            this._updateMarkers();
         };
 
         _.prototype.getPositions = function() {
@@ -1182,6 +1183,39 @@ var DrawHelper = (function() {
                 }
             }
         }
+
+        _.PolygonPrimitive.prototype._updateMarkers = function _updateMarkers() {
+            function calculateHalfMarkerPosition(index) {
+                var positions = this.positions;
+                return ellipsoid.cartographicToCartesian(
+                        new Cesium.EllipsoidGeodesic(ellipsoid.cartesianToCartographic(positions[index]),
+                            ellipsoid.cartesianToCartographic(positions[index < positions.length - 1 ? index + 1 : 0])).
+                        interpolateUsingFraction(0.5)
+                        );
+            }
+
+            // update "markers" (position handles)
+            // update "edit markers" (mid-position handles)
+
+            var i = 0;
+            var index = 0;
+            var length = this.positions.length + (this.isPolygon ? 0 : -1);
+            var positionCart = new Cesium.Cartographic();
+            var billboard;
+            for(; index < length; index++) {
+                billboard = this._markers.getBillboard(index);
+                // there may not be a billboard yet if e.g. the user is adding a point
+                if (billboard) {
+                    billboard.position = this.positions[index].clone();
+                }
+            }
+
+            // update "edit" ("creation"; mid/half) point marker positions
+            length = this._editMarkers.countBillboards();
+            for(index = 0; index < length; index++) {
+                this._editMarkers.getBillboard(index).position = calculateHalfMarkerPosition.bind(this)(index);
+            }
+        };
 
         function setEditMode(editMode) {
                 // if no change
