@@ -501,20 +501,25 @@ var DrawHelper = (function() {
 
         _.prototype.setCenter = function(center) {
             this.setAttribute('center', center);
+            this._markers.updateBillboardsPositions(this._getMarkerPositions());
         };
 
         _.prototype.setSemiMajorAxis = function(semiMajorAxis) {
             if(semiMajorAxis < this.getSemiMinorAxis()) return;
             this.setAttribute('semiMajorAxis', semiMajorAxis);
+            this._markers.updateBillboardsPositions(this._getMarkerPositions());
         };
 
         _.prototype.setSemiMinorAxis = function(semiMinorAxis) {
             if(semiMinorAxis > this.getSemiMajorAxis()) return;
             this.setAttribute('semiMinorAxis', semiMinorAxis);
+            this._markers.updateBillboardsPositions(this._getMarkerPositions());
         };
 
         _.prototype.setRotation = function(rotation) {
-            return this.setAttribute('rotation', rotation);
+            var result = this.setAttribute('rotation', rotation);
+            this._markers.updateBillboardsPositions(this._getMarkerPositions());
+            return result;
         };
 
         _.prototype.getCenter = function() {
@@ -1575,6 +1580,69 @@ var DrawHelper = (function() {
         }
 
 
+        _.EllipsePrimitive.prototype._getMarkerPositions = function _getMarkerPositions() {
+            // TODO(nms): THIS FUNCTION WAS TAKEN FROM CESIUM'S EllipseGeometryLibrary -- needs attribution
+            var rotAxis = new Cesium.Cartesian3();
+            var tempVec = new Cesium.Cartesian3();
+            var unitQuat = new Cesium.Quaternion();
+            var rotMtx = new Cesium.Matrix3();
+
+            function pointOnEllipsoid(theta, rotation, northVec, eastVec, aSqr, ab, bSqr, mag, unitPos, result) {
+                var azimuth = theta + rotation;
+
+                Cesium.Cartesian3.multiplyByScalar(eastVec, Math.cos(azimuth), rotAxis);
+                Cesium.Cartesian3.multiplyByScalar(northVec, Math.sin(azimuth), tempVec);
+                Cesium.Cartesian3.add(rotAxis, tempVec, rotAxis);
+
+                var cosThetaSquared = Math.cos(theta);
+                cosThetaSquared = cosThetaSquared * cosThetaSquared;
+
+                var sinThetaSquared = Math.sin(theta);
+                sinThetaSquared = sinThetaSquared * sinThetaSquared;
+
+                var radius = ab / Math.sqrt(bSqr * cosThetaSquared + aSqr * sinThetaSquared);
+                var angle = radius / mag;
+
+                // Create the quaternion to rotate the position vector to the boundary of the ellipse.
+                Cesium.Quaternion.fromAxisAngle(rotAxis, angle, unitQuat);
+                Cesium.Matrix3.fromQuaternion(unitQuat, rotMtx);
+
+                Cesium.Matrix3.multiplyByVector(rotMtx, unitPos, result);
+                Cesium.Cartesian3.normalize(result, result);
+                Cesium.Cartesian3.multiplyByScalar(result, mag, result);
+                return result;
+            }
+            // TODO(nms): END THIS FUNCTION WAS TAKEN
+
+
+            var ellipse = this;
+
+            var center = ellipse.getCenter();
+            var semiMajorAxis = ellipse.getSemiMajorAxis();
+            var semiMinorAxis = ellipse.getSemiMinorAxis();
+            var rotation = ellipse.getRotation();
+
+            var aSqr = semiMinorAxis * semiMinorAxis;
+            var bSqr = semiMajorAxis * semiMajorAxis;
+            var ab = semiMajorAxis * semiMinorAxis;
+
+            var mag = Cesium.Cartesian3.magnitude(center);
+
+            var unitPos = Cesium.Cartesian3.normalize(center, new Cesium.Cartesian3());
+            var eastVec = Cesium.Cartesian3.cross(Cesium.Cartesian3.UNIT_Z, center, new Cesium.Cartesian3());
+            eastVec = Cesium.Cartesian3.normalize(eastVec, eastVec);
+            var northVec = Cesium.Cartesian3.cross(unitPos, eastVec, new Cesium.Cartesian3());
+
+            var positions = [];
+            Cesium.Cartesian3.pack(pointOnEllipsoid(Cesium.Math.PI_OVER_TWO, rotation, northVec, eastVec, aSqr, ab, bSqr, mag, unitPos, new Cesium.Cartesian3()), positions, 0);
+            Cesium.Cartesian3.pack(pointOnEllipsoid(Cesium.Math.PI, rotation, northVec, eastVec, aSqr, ab, bSqr, mag, unitPos, new Cesium.Cartesian3()), positions, 3);
+            Cesium.EllipseGeometryLibrary.raisePositionsToHeight(positions, {height: ellipse._height || 0, ellipsoid: ellipsoid}, false);
+
+            return [
+                new Cesium.Cartesian3(positions[0], positions[1], positions[2]),
+                new Cesium.Cartesian3(positions[3], positions[4], positions[5])
+            ];
+        };
         _.EllipsePrimitive.prototype.setEditable = function() {
 
             if(this.setEditMode) {
@@ -1601,68 +1669,9 @@ var DrawHelper = (function() {
                     var _self = this;
                     // create the markers and handlers for the editing
                     if(this._markers == null) {
-                        // TODO(nms): THIS FUNCTION WAS TAKEN FROM CESIUM'S EllipseGeometryLibrary -- needs attribution
-                        var rotAxis = new Cesium.Cartesian3();
-                        var tempVec = new Cesium.Cartesian3();
-                        var unitQuat = new Cesium.Quaternion();
-                        var rotMtx = new Cesium.Matrix3();
-
-                        function pointOnEllipsoid(theta, rotation, northVec, eastVec, aSqr, ab, bSqr, mag, unitPos, result) {
-                            var azimuth = theta + rotation;
-
-                            Cesium.Cartesian3.multiplyByScalar(eastVec, Math.cos(azimuth), rotAxis);
-                            Cesium.Cartesian3.multiplyByScalar(northVec, Math.sin(azimuth), tempVec);
-                            Cesium.Cartesian3.add(rotAxis, tempVec, rotAxis);
-
-                            var cosThetaSquared = Math.cos(theta);
-                            cosThetaSquared = cosThetaSquared * cosThetaSquared;
-
-                            var sinThetaSquared = Math.sin(theta);
-                            sinThetaSquared = sinThetaSquared * sinThetaSquared;
-
-                            var radius = ab / Math.sqrt(bSqr * cosThetaSquared + aSqr * sinThetaSquared);
-                            var angle = radius / mag;
-
-                            // Create the quaternion to rotate the position vector to the boundary of the ellipse.
-                            Cesium.Quaternion.fromAxisAngle(rotAxis, angle, unitQuat);
-                            Cesium.Matrix3.fromQuaternion(unitQuat, rotMtx);
-
-                            Cesium.Matrix3.multiplyByVector(rotMtx, unitPos, result);
-                            Cesium.Cartesian3.normalize(result, result);
-                            Cesium.Cartesian3.multiplyByScalar(result, mag, result);
-                            return result;
-                        }
-
                         var markers = new _.BillboardGroup(drawHelper, dragBillboard);
-                        function getMarkerPositions() {
-                            var center = ellipse.getCenter();
-                            var semiMajorAxis = ellipse.getSemiMajorAxis();
-                            var semiMinorAxis = ellipse.getSemiMinorAxis();
-                            var rotation = ellipse.getRotation();
-
-                            var aSqr = semiMinorAxis * semiMinorAxis;
-                            var bSqr = semiMajorAxis * semiMajorAxis;
-                            var ab = semiMajorAxis * semiMinorAxis;
-
-                            var mag = Cesium.Cartesian3.magnitude(center);
-
-                            var unitPos = Cesium.Cartesian3.normalize(center, new Cesium.Cartesian3());
-                            var eastVec = Cesium.Cartesian3.cross(Cesium.Cartesian3.UNIT_Z, center, new Cesium.Cartesian3());
-                            eastVec = Cesium.Cartesian3.normalize(eastVec, eastVec);
-                            var northVec = Cesium.Cartesian3.cross(unitPos, eastVec, new Cesium.Cartesian3());
-
-                            var positions = [];
-                            Cesium.Cartesian3.pack(pointOnEllipsoid(Cesium.Math.PI_OVER_TWO, rotation, northVec, eastVec, aSqr, ab, bSqr, mag, unitPos, new Cesium.Cartesian3()), positions, 0);
-                            Cesium.Cartesian3.pack(pointOnEllipsoid(Cesium.Math.PI, rotation, northVec, eastVec, aSqr, ab, bSqr, mag, unitPos, new Cesium.Cartesian3()), positions, 3);
-                            Cesium.EllipseGeometryLibrary.raisePositionsToHeight(positions, {height: ellipse._height || 0, ellipsoid: ellipsoid}, false);
-
-                            return [
-                                new Cesium.Cartesian3(positions[0], positions[1], positions[2]),
-                                new Cesium.Cartesian3(positions[3], positions[4], positions[5])
-                            ];
-                        }
                         function onEdited() {
-                            ellipse.executeListeners({name: 'onEdited', center: ellipse.getCenter(), semiMajorAxis: ellipse.getSemiMajorAxis(), semiMinorAxis: ellipse.getSemiMinorAxis(), rotation: 0});
+                            ellipse.executeListeners({name: 'onEdited', center: ellipse.getCenter(), semiMajorAxis: ellipse.getSemiMajorAxis(), semiMinorAxis: ellipse.getSemiMinorAxis(), rotation: ellipse.getRotation()});
                         }
                         var handleMarkerChanges = {
                             dragHandlers: {
@@ -1673,7 +1682,7 @@ var DrawHelper = (function() {
                                     } else {
                                         ellipse.setSemiMinorAxis(distance);
                                     }
-                                    markers.updateBillboardsPositions(getMarkerPositions());
+                                    markers.updateBillboardsPositions(ellipse._getMarkerPositions());
                                 },
                                 onDragEnd: function(index, position) {
                                     onEdited();
@@ -1683,7 +1692,7 @@ var DrawHelper = (function() {
                                 return "Drag to change the excentricity and radius";
                             }
                         };
-                        markers.addBillboards(getMarkerPositions(), handleMarkerChanges);
+                        markers.addBillboards(ellipse._getMarkerPositions(), handleMarkerChanges);
                         this._markers = markers;
                         // add a handler for clicking in the globe
                         this._globeClickhandler = new Cesium.ScreenSpaceEventHandler(scene.canvas);
