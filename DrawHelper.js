@@ -1698,6 +1698,7 @@ var DrawHelper = (function() {
                 new Cesium.Cartesian3(positions[3], positions[4], positions[5])
             ];
         };
+
         _.EllipsePrimitive.prototype.setEditable = function() {
 
             if(this.setEditMode) {
@@ -1749,12 +1750,95 @@ var DrawHelper = (function() {
                         };
                         markers.addBillboards(ellipse._getMarkerPositions(), handleMarkerChanges);
                         this._markers = markers;
-                        // add a handler for clicking in the globe
-                        this._globeClickhandler = new Cesium.ScreenSpaceEventHandler(scene.canvas);
-                        this._globeClickhandler.setInputAction(
+
+                        var handlePrimitiveChanges = {
+                            dragHandlers: {
+                                onDragStart: function onDragStart(position) {
+                                    //// INTIALIZE DRAGGING-OPERATION
+
+                                    // setup dragging-operation
+                                    _self._handlingDragOperation = true;
+                                    _self._initialPrimitiveDragPosition = position;
+
+                                    scene.screenSpaceCameraController.enableInputs = false;
+
+                                    _self._screenSpaceEventHandler.setInputAction(function _handleMouseMove(movement) {
+                                        var position = scene.camera.pickEllipsoid(movement.endPosition, ellipsoid);
+                                        if (position) {
+                                            position = ellipsoid.cartesianToCartographic(position);
+                                            handlePrimitiveChanges.dragHandlers.onDrag(position);
+                                        } else {
+                                            handlePrimitiveChanges.dragHandlers.onDragEnd();
+                                        }
+                                    }, Cesium.ScreenSpaceEventType.MOUSE_MOVE);
+
+                                    _self._screenSpaceEventHandler.setInputAction(function _handleMouseUp(movement) {
+                                        var position = scene.camera.pickEllipsoid(movement.position, ellipsoid);
+                                        position = ellipsoid.cartesianToCartographic(position);
+                                        handlePrimitiveChanges.dragHandlers.onDragEnd(position);
+                                    }, Cesium.ScreenSpaceEventType.LEFT_UP);
+                                },
+                                onDrag: function onDrag(position) {
+                                    //// UPDATE DRAGGING-OPERATION
+                                    var translation = new Cesium.Cartesian2(position.longitude - _self._initialPrimitiveDragPosition.longitude, position.latitude - _self._initialPrimitiveDragPosition.latitude);
+
+                                    var centerCart = new Cesium.Cartographic();
+                                    ellipsoid.cartesianToCartographic(_self.center, centerCart);
+                                    centerCart.longitude += translation.x;
+                                    centerCart.latitude += translation.y;
+                                    ellipsoid.cartographicToCartesian(centerCart, _self.center);
+
+                                    markers.updateBillboardsPositions(_self._getMarkerPositions());
+
+                                    _self._createPrimitive = true;
+
+                                    onEdited();
+
+                                    _self._initialPrimitiveDragPosition = position;
+                                },
+                                onDragEnd: function onDragEnd(position) {
+                                    //// FINALIZE DRAGGING-OPERATION
+                                    var translation = new Cesium.Cartesian2(position.longitude - _self._initialPrimitiveDragPosition.longitude, position.latitude - _self._initialPrimitiveDragPosition.latitude);
+
+                                    var centerCart = new Cesium.Cartographic();
+                                    ellipsoid.cartesianToCartographic(_self.center, centerCart);
+                                    centerCart.longitude += translation.x;
+                                    centerCart.latitude += translation.y;
+                                    ellipsoid.cartographicToCartesian(centerCart, _self.center);
+
+                                    markers.updateBillboardsPositions(_self._getMarkerPositions());
+
+                                    _self._createPrimitive = true;
+
+                                    onEdited();
+
+                                    _self._screenSpaceEventHandler.removeInputAction(Cesium.ScreenSpaceEventType.MOUSE_MOVE);
+                                    _self._screenSpaceEventHandler.removeInputAction(Cesium.ScreenSpaceEventType.LEFT_UP);
+
+                                    scene.screenSpaceCameraController.enableInputs = true;
+
+                                    //// cleanup dragging-operation
+                                    delete _self._handlingDragOperation;
+                                    delete _self._initialPrimitiveDragPosition;
+                                }
+                            }
+                        };
+
+                        // add a handler for ...
+                        this._screenSpaceEventHandler = new Cesium.ScreenSpaceEventHandler(scene.canvas);
+                        this._screenSpaceEventHandler.setInputAction(function _handleMouseDown(movement) {
+                            var pickedObject = scene.pick(movement.position);
+                            if (pickedObject && pickedObject.primitive && pickedObject.primitive === _self && !_self._handlingDragOperation) {
+                                var position = ellipsoid.cartesianToCartographic(scene.camera.pickEllipsoid(movement.position, ellipsoid));
+                                handlePrimitiveChanges.dragHandlers.onDragStart(position);
+                            }
+                        }, Cesium.ScreenSpaceEventType.LEFT_DOWN);
+
+                        this._screenSpaceEventHandler.setInputAction(
                             function (movement) {
                                 var pickedObject = scene.pick(movement.position);
-                                if(!(pickedObject && pickedObject.primitive)) {
+                                if (!(pickedObject && pickedObject.primitive)) {
+                                    // user clicked the globe; cancel the edit mode
                                     _self.setEditMode(false);
                                 }
                             }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
@@ -1767,7 +1851,7 @@ var DrawHelper = (function() {
                     if(this._markers != null) {
                         this._markers.remove();
                         this._markers = null;
-                        this._globeClickhandler.destroy();
+                        this._screenSpaceEventHandler.destroy();
                     }
                     this._editMode = false;
                 }
