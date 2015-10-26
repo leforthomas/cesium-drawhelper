@@ -1291,7 +1291,7 @@ var DrawHelper = (function() {
                                 onEdited();
                             },
                             tooltip: function() {
-                                if(_self.positions.length > 3) {
+                                if (_self.positions.length - 2 > (_self.isPolygon ? 1 : 0)) {
                                     return "Double click to remove this point";
                                 }
                             }
@@ -1396,7 +1396,7 @@ var DrawHelper = (function() {
                                     // update polygon primitive positions
                                     // update point marker positions
                                     var index = 0;
-                                    var length = _self.positions.length + (_self.isPolygon ? 0 : -1);
+                                    var length = _self.positions.length;
                                     var positionCart = new Cesium.Cartographic();
                                     var billboard;
                                     for(; index < length; index++) {
@@ -1433,7 +1433,7 @@ var DrawHelper = (function() {
                                     // update polygon primitive positions
                                     // update point marker positions
                                     var index = 0;
-                                    var length = _self.positions.length + (_self.isPolygon ? 0 : -1);
+                                    var length = _self.positions.length;
                                     var positionCart = new Cesium.Cartographic();
                                     var billboard;
                                     for(; index < length; index++) {
