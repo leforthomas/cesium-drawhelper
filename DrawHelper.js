@@ -1318,10 +1318,15 @@ var DrawHelper = (function() {
                                 onDragStart: function(index, position) {
                                     _self._handlingDragOperation = true;
 
-                                    // add a new position to the polygon but not a new marker yet
+                                    // add a new position to the polygon
                                     this.index = index + 1;
                                     _self.positions.splice(this.index, 0, position);
                                     _self._createPrimitive = true;
+
+                                    // add a new marker (and "edit" markers)...
+                                    markers.insertBillboard(this.index, position, handleMarkerChanges);
+                                    editMarkers.getBillboard(this.index - 1).position = calculateHalfMarkerPosition(this.index - 1);
+                                    editMarkers.insertBillboard(this.index, calculateHalfMarkerPosition(this.index), handleEditMarkerChanges);
 
                                     onEdited();
                                 },
@@ -1329,13 +1334,17 @@ var DrawHelper = (function() {
                                     _self.positions[this.index] = position;
                                     _self._createPrimitive = true;
 
+                                    markers.getBillboard(this.index).position = position;
+                                    editMarkers.getBillboard(this.index - 1).position = calculateHalfMarkerPosition(this.index - 1);
+                                    editMarkers.getBillboard(this.index).position = calculateHalfMarkerPosition(this.index);
+
                                     onEdited();
                                 },
                                 onDragEnd: function(index, position) {
                                     // create new sets of makers for editing
-                                    markers.insertBillboard(this.index, position, handleMarkerChanges);
-                                    editMarkers.getBillboard(this.index - 1).position = calculateHalfMarkerPosition(this.index - 1);
-                                    editMarkers.insertBillboard(this.index, calculateHalfMarkerPosition(this.index), handleEditMarkerChanges);
+                                    //markers.insertBillboard(this.index, position, handleMarkerChanges);
+                                    //editMarkers.getBillboard(this.index - 1).position = calculateHalfMarkerPosition(this.index - 1);
+                                    //editMarkers.insertBillboard(this.index, calculateHalfMarkerPosition(this.index), handleEditMarkerChanges);
                                     _self._createPrimitive = true;
 
                                     delete _self._handlingDragOperation;
