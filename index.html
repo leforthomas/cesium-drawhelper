@@ -59,14 +59,6 @@
         var cesiumWidget = new Cesium.CesiumWidget('cesiumContainer', {scene3DOnly: true});
         var scene = cesiumWidget.scene;
 
-        // add terrain elevation
-        var cesiumTerrainProviderHeightmaps = new Cesium.CesiumTerrainProvider({
-            url : 'https://cesiumjs.org/tilesets/terrain/smallterrain',
-            credit : 'Terrain data courtesy Analytical Graphics, Inc.'
-        });
-
-        scene.terrainProvider = cesiumTerrainProviderHeightmaps;
-
         // start the draw helper to enable shape creation and editing
         var drawHelper = new DrawHelper(cesiumWidget);
         var toolbar = drawHelper.addToolbar(document.getElementById("toolbar"), {
