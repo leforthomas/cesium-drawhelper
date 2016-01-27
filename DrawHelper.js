@@ -398,7 +398,9 @@ var DrawHelper = (function() {
 
         _.prototype.setPositions = function(positions) {
             this.setAttribute('positions', positions);
-            this._updateMarkers();
+            if (this._editMode) {
+                this._updateMarkers();
+            }
         };
 
         _.prototype.getPositions = function() {
@@ -1208,11 +1210,28 @@ var DrawHelper = (function() {
             // update "markers" (position handles)
             // update "edit markers" (mid-position handles)
 
+            while(this._markers._orderedBillboards.length > this.positions.length) {
+                this._markers.removeBillboard(this._markers._orderedBillboards.length - 1);
+                this._editMarkers.removeBillboard(this._editMarkers._orderedBillboards.length - 1);
+            }
+
+            var newMarkerPosition;
+            if (this._editMarkers._orderedBillboards.length < this.positions.length) {
+                var markerChangeHandlers = _getMarkerChangeHandlers(this);
+                var editMarkerChangeHandlers = _getEditMarkerChangeHandlers(this);
+                while (this._editMarkers._orderedBillboards.length < this.positions.length) {
+                    newMarkerPosition = this.positions[this._markers._orderedBillboards.length - 1];
+                    this._markers.addBillboard(newMarkerPosition, markerChangeHandlers);
+                    this._editMarkers.addBillboard(newMarkerPosition, editMarkerChangeHandlers);
+                }
+            }
+
             var i = 0;
             var index = 0;
             var length = this.positions.length + (this.isPolygon ? 0 : -1);
             var positionCart = new Cesium.Cartographic();
             var billboard;
+
             for(; index < length; index++) {
                 billboard = this._markers.getBillboard(index);
                 // there may not be a billboard yet if e.g. the user is adding a point
@@ -1227,6 +1246,141 @@ var DrawHelper = (function() {
                 this._editMarkers.getBillboard(index).position = calculateHalfMarkerPosition.bind(this)(index);
             }
         };
+
+        function _getMarkerChangeHandlers(_self) {
+            function onEdited() {
+                _self.executeListeners({name: 'onEdited', positions: _self.positions});
+            }
+
+            function updateHalfMarkers(index, positions) {
+                // update the half markers before and after the index
+                var editIndex = index - 1 < 0 ? positions.length - 1 : index - 1;
+                if(editIndex < _self._editMarkers.countBillboards()) {
+                    _self._editMarkers.getBillboard(editIndex).position = calculateHalfMarkerPosition(editIndex);
+                }
+                editIndex = index;
+                if(editIndex < _self._editMarkers.countBillboards()) {
+                    _self._editMarkers.getBillboard(editIndex).position = calculateHalfMarkerPosition(editIndex);
+                }
+            }
+
+            function calculateHalfMarkerPosition(index) {
+                var positions = _self.positions;
+                return ellipsoid.cartographicToCartesian(
+                    new Cesium.EllipsoidGeodesic(ellipsoid.cartesianToCartographic(positions[index]),
+                        ellipsoid.cartesianToCartographic(positions[index < positions.length - 1 ? index + 1 : 0])).
+                        interpolateUsingFraction(0.5)
+                );
+            }
+
+            return {
+                dragHandlers: {
+                    onDragStart: function(index, position) {
+                        _self._handlingDragOperation = true;
+
+                        _self.positions[index] = position;
+                        updateHalfMarkers(index, _self.positions);
+                        _self._createPrimitive = true;
+
+                        onEdited();
+                    },
+                    onDrag: function(index, position) {
+                        _self.positions[index] = position;
+                        updateHalfMarkers(index, _self.positions);
+                        _self._createPrimitive = true;
+
+                        onEdited();
+                    },
+                    onDragEnd: function(index, position) {
+                        if (position) {
+                            _self.positions[index] = position;
+                            updateHalfMarkers(index, _self.positions);
+                            _self._createPrimitive = true;
+                        }
+
+                        delete _self._handlingDragOperation;
+
+                        onEdited();
+                    }
+                },
+                onDoubleClick: function(index) {
+                    if(_self.positions.length < 4) {
+                        return;
+                    }
+                    // remove the point and the corresponding markers
+                    _self.positions.splice(index, 1);
+                    _self._createPrimitive = true;
+                    _self._markers.removeBillboard(index);
+                    _self._editMarkers.removeBillboard(index);
+                    updateHalfMarkers(index, _self.positions);
+                    onEdited();
+                },
+                tooltip: function() {
+                    if (_self.positions.length - 2 > (_self.isPolygon ? 1 : 0)) {
+                        return "Double click to remove this point";
+                    }
+                }
+            };
+        }
+
+        function _getEditMarkerChangeHandlers(_self) {
+            function onEdited() {
+                _self.executeListeners({name: 'onEdited', positions: _self.positions});
+            }
+
+            function calculateHalfMarkerPosition(index) {
+                var positions = _self.positions;
+                return ellipsoid.cartographicToCartesian(
+                    new Cesium.EllipsoidGeodesic(ellipsoid.cartesianToCartographic(positions[index]),
+                        ellipsoid.cartesianToCartographic(positions[index < positions.length - 1 ? index + 1 : 0])).
+                        interpolateUsingFraction(0.5)
+                );
+            }
+
+            return {
+                dragHandlers: {
+                    onDragStart: function(index, position) {
+                        _self._handlingDragOperation = true;
+
+                        // add a new position to the polygon
+                        this.index = index + 1;
+                        _self.positions.splice(this.index, 0, position);
+                        _self._createPrimitive = true;
+
+                        // add a new marker (and "edit" markers)...
+                        _self._markers.insertBillboard(this.index, position, _getMarkerChangeHandlers(_self));
+                        _self._editMarkers.getBillboard(this.index - 1).position = calculateHalfMarkerPosition(this.index - 1);
+                        _self._editMarkers.insertBillboard(this.index, calculateHalfMarkerPosition(this.index), _getEditMarkerChangeHandlers(_self));
+
+                        onEdited();
+                    },
+                    onDrag: function(index, position) {
+                        _self.positions[this.index] = position;
+                        _self._createPrimitive = true;
+
+                        _self._markers.getBillboard(this.index).position = position;
+                        _self._editMarkers.getBillboard(this.index - 1).position = calculateHalfMarkerPosition(this.index - 1);
+                        _self._editMarkers.getBillboard(this.index).position = calculateHalfMarkerPosition(this.index);
+
+                        onEdited();
+                    },
+                    onDragEnd: function(index, position) {
+                        // create new sets of makers for editing
+                        //_self._markers.insertBillboard(this.index, position, handleMarkerChanges);
+                        //_self._editMarkers.getBillboard(this.index - 1).position = calculateHalfMarkerPosition(this.index - 1);
+                        //_self._editMarkers.insertBillboard(this.index, calculateHalfMarkerPosition(this.index), handleEditMarkerChanges);
+                        _self._createPrimitive = true;
+
+                        delete _self._handlingDragOperation;
+
+                        onEdited();
+                    }
+                },
+                tooltip: function() {
+                    return "Drag to create a new point";
+                }
+            };
+        }
 
         function setEditMode(editMode) {
                 // if no change
@@ -1244,69 +1398,7 @@ var DrawHelper = (function() {
                     if(this._markers == null) {
                         var markers = new _.BillboardGroup(drawHelper, dragBillboard);
                         var editMarkers = new _.BillboardGroup(drawHelper, dragHalfBillboard);
-                        // function for updating the edit markers around a certain point
-                        function updateHalfMarkers(index, positions) {
-                            // update the half markers before and after the index
-                            var editIndex = index - 1 < 0 ? positions.length - 1 : index - 1;
-                            if(editIndex < editMarkers.countBillboards()) {
-                                editMarkers.getBillboard(editIndex).position = calculateHalfMarkerPosition(editIndex);
-                            }
-                            editIndex = index;
-                            if(editIndex < editMarkers.countBillboards()) {
-                                editMarkers.getBillboard(editIndex).position = calculateHalfMarkerPosition(editIndex);
-                            }
-                        }
-                        function onEdited() {
-                            _self.executeListeners({name: 'onEdited', positions: _self.positions});
-                        }
-                        var handleMarkerChanges = {
-                            dragHandlers: {
-                                onDragStart: function(index, position) {
-                                    _self._handlingDragOperation = true;
-
-                                    _self.positions[index] = position;
-                                    updateHalfMarkers(index, _self.positions);
-                                    _self._createPrimitive = true;
-
-                                    onEdited();
-                                },
-                                onDrag: function(index, position) {
-                                    _self.positions[index] = position;
-                                    updateHalfMarkers(index, _self.positions);
-                                    _self._createPrimitive = true;
-
-                                    onEdited();
-                                },
-                                onDragEnd: function(index, position) {
-                                    if (position) {
-                                        _self.positions[index] = position;
-                                        updateHalfMarkers(index, _self.positions);
-                                        _self._createPrimitive = true;
-                                    }
-
-                                    delete _self._handlingDragOperation;
-
-                                    onEdited();
-                                }
-                            },
-                            onDoubleClick: function(index) {
-                                if(_self.positions.length < 4) {
-                                    return;
-                                }
-                                // remove the point and the corresponding markers
-                                _self.positions.splice(index, 1);
-                                _self._createPrimitive = true;
-                                markers.removeBillboard(index);
-                                editMarkers.removeBillboard(index);
-                                updateHalfMarkers(index, _self.positions);
-                                onEdited();
-                            },
-                            tooltip: function() {
-                                if (_self.positions.length - 2 > (_self.isPolygon ? 1 : 0)) {
-                                    return "Double click to remove this point";
-                                }
-                            }
-                        };
+                        var handleMarkerChanges = _getMarkerChangeHandlers(this);
                         // add billboards and keep an ordered list of them for the polygon edges
                         markers.addBillboards(_self.positions, handleMarkerChanges);
                         this._markers = markers;
@@ -1324,51 +1416,13 @@ var DrawHelper = (function() {
                         for(; index < length; index++) {
                             halfPositions.push(calculateHalfMarkerPosition(index));
                         }
-                        var handleEditMarkerChanges = {
-                            dragHandlers: {
-                                onDragStart: function(index, position) {
-                                    _self._handlingDragOperation = true;
-
-                                    // add a new position to the polygon
-                                    this.index = index + 1;
-                                    _self.positions.splice(this.index, 0, position);
-                                    _self._createPrimitive = true;
-
-                                    // add a new marker (and "edit" markers)...
-                                    markers.insertBillboard(this.index, position, handleMarkerChanges);
-                                    editMarkers.getBillboard(this.index - 1).position = calculateHalfMarkerPosition(this.index - 1);
-                                    editMarkers.insertBillboard(this.index, calculateHalfMarkerPosition(this.index), handleEditMarkerChanges);
-
-                                    onEdited();
-                                },
-                                onDrag: function(index, position) {
-                                    _self.positions[this.index] = position;
-                                    _self._createPrimitive = true;
-
-                                    markers.getBillboard(this.index).position = position;
-                                    editMarkers.getBillboard(this.index - 1).position = calculateHalfMarkerPosition(this.index - 1);
-                                    editMarkers.getBillboard(this.index).position = calculateHalfMarkerPosition(this.index);
-
-                                    onEdited();
-                                },
-                                onDragEnd: function(index, position) {
-                                    // create new sets of makers for editing
-                                    //markers.insertBillboard(this.index, position, handleMarkerChanges);
-                                    //editMarkers.getBillboard(this.index - 1).position = calculateHalfMarkerPosition(this.index - 1);
-                                    //editMarkers.insertBillboard(this.index, calculateHalfMarkerPosition(this.index), handleEditMarkerChanges);
-                                    _self._createPrimitive = true;
-
-                                    delete _self._handlingDragOperation;
-
-                                    onEdited();
-                                }
-                            },
-                            tooltip: function() {
-                                return "Drag to create a new point";
-                            }
-                        };
+                        var handleEditMarkerChanges = _getEditMarkerChangeHandlers(this);
                         editMarkers.addBillboards(halfPositions, handleEditMarkerChanges);
                         this._editMarkers = editMarkers;
+
+                        function onEdited() {
+                            _self.executeListeners({name: 'onEdited', positions: _self.positions});
+                        }
 
                         var handlePrimitiveChanges = {
                             dragHandlers: {
